@@ -16,9 +16,9 @@ pub struct OpenGlContext
     /// The display of the renderer, currently OpenGL-based
     pub display: Display,
     // Shaders (tied to the current display)
-    // pub shader_programs: HashMap<&'static str, Program, BuildHasherDefault<XxHash>>,
+    pub shader_programs: HashMap<&'static str, Program, BuildHasherDefault<XxHash>>,
     // Images used by the renderer
-    // pub images: HashMap<&'static str, CompressedSrgbTexture2d, BuildHasherDefault<XxHash>>,
+    pub images: HashMap<&'static str, CompressedSrgbTexture2d, BuildHasherDefault<XxHash>>,
 }
 
 impl OpenGlContext {
@@ -46,13 +46,13 @@ impl OpenGlContext {
             .build_glium_debug(glium::debug::DebugCallbackBehavior::DebugMessageOnError)
             .map_err(|_e| AppError { })?;
 
-        // let shader_programs = HashMap<String, Program, BuildHasherDefault<XxHash>>::new();
-        // let images = HashMap<String, CompressedSrgbTexture2d, BuildHasherDefault<XxHash>>::new();
+        let shader_programs = HashMap::<&'static str, Program, BuildHasherDefault<XxHash>>::default();
+        let images = HashMap::<&'static str, CompressedSrgbTexture2d, BuildHasherDefault<XxHash>>::default();
 
         Ok(Self {
             display: display,
-            // shader_programs: shader_programs,
-            // images: images,
+            shader_programs: shader_programs,
+            images: images,
         })
     }
 }

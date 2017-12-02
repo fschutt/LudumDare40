@@ -35,6 +35,7 @@ extern crate tinyfiledialogs;
 extern crate glium_text;
 extern crate twox_hash;
 extern crate nphysics2d;
+extern crate rodio;
 
 macro_rules! fast_hashmap {
     ($T:ident, $U:ident) => (::std::collections::HashMap<$T, $U, ::std::hash::BuildHasherDefault<::twox_hash::XxHash>>::new();)
@@ -74,6 +75,20 @@ fn write_to_screen(text: &str) {
                       [0.0, 0.0, 1.0, 0.0],
                       [0.0, 0.0, 0.0, 1.0]];
         glium_text::draw(&text, &system, &mut display.draw(), matrix, (1.0, 1.0, 0.0, 1.0));
+    */
+}
+
+pub fn play_audio() {
+    /*
+        use std::fs::File;
+        use std::io::BufReader;
+        use rodio::Source;
+
+        let endpoint = rodio::get_default_endpoint().unwrap();
+
+        let file = File::open("sound.ogg").unwrap();
+        let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
+        rodio::play_raw(&endpoint, source.convert_samples());
     */
 }
 
