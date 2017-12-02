@@ -5,6 +5,8 @@
 #![windows_subsystem = "windows"]
 
 #![allow(dead_code)]
+#![allow(unused_imports)]
+#![allow(unused_macros)]
 
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
@@ -12,8 +14,6 @@
 #![warn(missing_copy_implementations,
         trivial_numeric_casts,
         trivial_casts,
-        unused_extern_crates,
-        unused_import_braces,
         unused_qualifications)]
 #![cfg_attr(feature = "clippy", warn(cast_possible_truncation))]
 #![cfg_attr(feature = "clippy", warn(cast_possible_wrap))]
@@ -33,14 +33,48 @@ extern crate image;
 extern crate fern;
 extern crate tinyfiledialogs;
 extern crate glium_text;
+extern crate twox_hash;
+extern crate nphysics2d;
 
-macro_rules! gui_error {
-    ($message:expr) => (::tinyfiledialogs::message_box_ok("Error", &$message, ::tinyfiledialogs::MessageBoxIcon::Error);)
+macro_rules! fast_hashmap {
+    ($T:ident, $U:ident) => (::std::collections::HashMap<$T, $U, ::std::hash::BuildHasherDefault<::twox_hash::XxHash>>::new();)
 }
+
+pub mod input;
+pub mod renderer;
+pub mod context;
+pub mod errors;
+
+use renderer::Renderer;
 
 fn main() {
     set_up_logging();
-    println!("Hello, world!");
+    let mut renderer = Renderer::new(500, 600).unwrap();
+    // todo: use futures
+    renderer.load_map(::std::io::Cursor::new(include_str!("../assets/maps/main.json")));
+    renderer.show_start_menu();
+    renderer.run_main_loop();
+}
+
+fn write_to_screen(text: &str) {
+    /*
+        // The `TextSystem` contains the shaders and elements used for text display.
+        let system = glium_text::TextSystem::new(&display);
+
+        // Creating a `FontTexture`, which a regular `Texture` which contains the font.
+        // Note that loading the systems fonts is not covered by this library.
+        let font = glium_text::FontTexture::new(&display, std::fs::File::open(&std::path::Path::new("my_font.ttf")).unwrap(), 24).unwrap();
+
+        // Creating a `TextDisplay` which contains the elements required to draw a specific sentence.
+        let text = glium_text::TextDisplay::new(&system, &font, text);
+
+        // Finally, drawing the text is done like this:
+        let matrix = [[1.0, 0.0, 0.0, 0.0],
+                      [0.0, 1.0, 0.0, 0.0],
+                      [0.0, 0.0, 1.0, 0.0],
+                      [0.0, 0.0, 0.0, 1.0]];
+        glium_text::draw(&text, &system, &mut display.draw(), matrix, (1.0, 1.0, 0.0, 1.0));
+    */
 }
 
 /// Sets up the global logger
