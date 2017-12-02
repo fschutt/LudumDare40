@@ -45,16 +45,16 @@ pub mod input;
 pub mod renderer;
 pub mod context;
 pub mod errors;
+pub mod color;
+pub mod audio;
+pub mod game;
 
-use renderer::Renderer;
+use game::Game;
 
 fn main() {
     set_up_logging();
-    let mut renderer = Renderer::new(500, 600).unwrap();
-    // todo: use futures
-    renderer.load_map(::std::io::Cursor::new(include_str!("../assets/maps/main.json")));
-    renderer.show_start_menu();
-    renderer.run_main_loop();
+    let mut game = Game::new(800, 600);
+    game.run_main_loop();
 }
 
 fn write_to_screen(text: &str) {
@@ -75,20 +75,6 @@ fn write_to_screen(text: &str) {
                       [0.0, 0.0, 1.0, 0.0],
                       [0.0, 0.0, 0.0, 1.0]];
         glium_text::draw(&text, &system, &mut display.draw(), matrix, (1.0, 1.0, 0.0, 1.0));
-    */
-}
-
-pub fn play_audio() {
-    /*
-        use std::fs::File;
-        use std::io::BufReader;
-        use rodio::Source;
-
-        let endpoint = rodio::get_default_endpoint().unwrap();
-
-        let file = File::open("sound.ogg").unwrap();
-        let source = rodio::Decoder::new(BufReader::new(file)).unwrap();
-        rodio::play_raw(&endpoint, source.convert_samples());
     */
 }
 

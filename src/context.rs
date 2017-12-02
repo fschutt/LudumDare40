@@ -6,6 +6,7 @@ use twox_hash::XxHash;
 use std::hash::BuildHasherDefault;
 
 use errors::Error as AppError;
+use color::Color;
 use std::collections::HashMap;
 
 /// No indices
@@ -55,4 +56,10 @@ impl OpenGlContext {
             images: images,
         })
     }
+
+    // clear the screen
+    pub fn clear_screen(color: Color) {
+
+    }
 }
+

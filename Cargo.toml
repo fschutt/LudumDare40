@@ -14,3 +14,8 @@ tinyfiledialogs = "3.0.4"
 twox-hash = "1.1.0"
 nphysics2d = "0.7.2"
 rodio = "0.5.2"
+
+[profile.release]
+panic = "abort"
+debug = false
+lto = true
