@@ -142,8 +142,8 @@ fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>, shaders: &Shade
     draw_centered_text_with_shadow(frame, "(C) Felix Schütt", &small_font, 0.8, 1);
     draw_centered_text_with_shadow(frame, "Ludum Dare 40", &small_font, 0.85, 1);
 
-    let start_game_button_width = 50.0; // px
-    let start_game_button_height = 20.0; // px
+    let start_game_button_width = 190.0; // px
+    let start_game_button_height = 49.0; // px
     let half_start_game_button_width  = start_game_button_width  / 2.0;
     let half_start_game_button_height = start_game_button_height / 2.0;
 
@@ -191,7 +191,7 @@ fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>, shaders: &Shade
         }
     }
 
-    draw_centered_text_with_shadow(frame, "Start Game!", &small_font, 0.5, 0);
+    draw_centered_text_with_shadow(frame, "Start Game", &small_font, 0.5, 0);
 }
 
 fn draw_centered_text_with_shadow(frame: &mut GameFrame, text: &str, font: &FontInstanceId, offset_y: f32, shadow_offset: u32) {

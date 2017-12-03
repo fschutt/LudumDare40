@@ -98,8 +98,8 @@ impl TextureSystem {
                          (target_tr.screen_bottom_y + target_tr.screen_height) as f32,
                          z],
             tex_coords: [
-                        (( source_tr.bottom_x as f32 / t_w as f32) * 2.0) - 1.0,
-                        (((source_tr.bottom_y + source_tr.height) as f32 / t_h as f32) * 2.0) - 1.0
+                        (( source_tr.bottom_x as f32 / t_w as f32)),
+                        (((source_tr.bottom_y + source_tr.height) as f32 / t_h as f32))
                         ],
         };
 
@@ -108,8 +108,8 @@ impl TextureSystem {
                          (target_tr.screen_bottom_y + target_tr.screen_height) as f32,
                          z],
             tex_coords: [
-                        (((source_tr.bottom_x + source_tr.width) as f32 / t_w as f32) * 2.0) - 1.0,
-                        (((source_tr.bottom_y + source_tr.height) as f32 / t_h as f32) * 2.0) - 1.0
+                        (((source_tr.bottom_x + source_tr.width) as f32 / t_w as f32)),
+                        (((source_tr.bottom_y + source_tr.height) as f32 / t_h as f32))
                         ],
         };
 
@@ -118,8 +118,8 @@ impl TextureSystem {
                           target_tr.screen_bottom_y as f32,
                           z],
             tex_coords: [
-                        (( source_tr.bottom_x as f32 / t_w as f32) * 2.0) - 1.0,
-                        (( source_tr.bottom_y as f32 / t_h as f32) * 2.0) - 1.0
+                        (( source_tr.bottom_x as f32 / t_w as f32)),
+                        (( source_tr.bottom_y as f32 / t_h as f32))
                         ],
         };
 
@@ -128,8 +128,8 @@ impl TextureSystem {
                           target_tr.screen_bottom_y as f32,
                           z],
             tex_coords: [
-                        (((source_tr.bottom_x + source_tr.width) as f32 / t_w as f32) * 2.0) - 1.0,
-                        (( source_tr.bottom_y as f32 / t_h as f32) * 2.0) - 1.0
+                        (((source_tr.bottom_x + source_tr.width) as f32 / t_w as f32)),
+                        (( source_tr.bottom_y as f32 / t_h as f32))
                         ],
         };
 

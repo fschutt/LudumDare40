@@ -8,6 +8,7 @@
 #![allow(unused_imports)]
 #![allow(unused_macros)]
 #![allow(unused_doc_comment)]
+#![allow(unused_variables)]
 
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
@@ -30,7 +31,6 @@
 #[macro_use] extern crate log;
 extern crate image;
 extern crate fern;
-extern crate tinyfiledialogs;
 extern crate glium_text;
 extern crate twox_hash;
 extern crate nphysics2d;

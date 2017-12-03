@@ -16,8 +16,7 @@ uniform float window_height;
 
 void main() {
     float x_pos = ((position[0] / window_width) * 2.0) - 1.0;
-    float y_pos = ((position[1] / window_width) * 2.0) - 1.0;
-    // float y_pos = ((window_height_new - position[1]) / window_height_new);
+    float y_pos = ((position[1] / window_height) * 2.0) - 1.0;
 
     v_tex_coords = tex_coords;
     gl_Position = vec4(x_pos, y_pos, position[2], 1.0);
