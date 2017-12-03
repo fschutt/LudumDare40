@@ -27,12 +27,9 @@
 #![cfg_attr(feature = "clippy", warn(wrong_pub_self_convention))]
 
 #[macro_use] extern crate glium;
-#[macro_use] extern crate failure;
-#[macro_use] extern crate log;
 extern crate image;
-extern crate fern;
 extern crate glium_text;
-extern crate twox_hash;
+// extern crate twox_hash;
 extern crate nphysics2d;
 extern crate rodio;
 
@@ -54,34 +51,12 @@ pub mod ui;
 pub mod player_state;
 pub mod actions;
 
-use game::Game;
-
 pub type FastHashMap<T, U> = ::std::collections::HashMap<T, U, ::std::hash::BuildHasherDefault<::twox_hash::XxHash>>;
 pub type FontInstanceIdMap = FastHashMap<&'static str, font::FontInstanceId>;
 pub type TextureInstanceIdMap = FastHashMap<&'static str, texture::TextureId>;
 pub type ShaderHashMap = FastHashMap<&'static str, ::glium::Program>;
 
 fn main() {
-    set_up_logging();
-    let mut game = Game::new(800, 600);
+    let mut game = game::Game::new(800, 600);
     game.run_main_loop();
-}
-
-/// Sets up the global logger
-#[inline]
-fn set_up_logging()
-{
-    fern::Dispatch::new()
-        .format(|out, message, record| {
-            out.finish(format_args!(
-                "[{}] {}",
-                record.level(),
-                message
-            ))
-        })
-        .level(log::LogLevelFilter::Debug)
-        .chain(std::io::stdout())
-        .chain(fern::log_file("output.log").unwrap())
-        .apply()
-        .expect("[FATAL] Failed to initialize global logger");
 }

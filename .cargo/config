@@ -1,0 +1,2 @@
+[build]
+link-args = "-Wl,--gc-sections -ffunction-sections -dead_strip"

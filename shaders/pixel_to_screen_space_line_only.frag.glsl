@@ -5,8 +5,8 @@
 in vec2 v_tex_coords;
 out vec4 color;
 
-uniform vec4 color;
+uniform vec4 in_color;
 
 void main() {
-    color = color;
+    color = in_color;
 }

@@ -16,6 +16,7 @@ use glium::backend::Context;
 use ui::{Ui, UiRect, UiRendererData, UiActions};
 
 pub const FONT_BIG_ID: &str = "font_fredoka_big";
+pub const FONT_MEDIUM_ID: &str = "font_fredoka_medium";
 pub const FONT_SMALL_ID: &str = "font_fredoka_small";
 
 pub const TEXTURE_START_GAME_ID: &str = "texture_start_game";
@@ -89,6 +90,9 @@ impl Game {
         let font_instance_big_id = renderer.context.add_font(::assets::FONT_ID, ::assets::FONT_BIG_SIZE, Cursor::new(::assets::FONT));
         available_font_ids.insert(FONT_BIG_ID, font_instance_big_id);
 
+        let font_instance_medium_id = renderer.context.add_font(::assets::FONT_ID, ::assets::FONT_MEDIUM_SIZE, Cursor::new(::assets::FONT));
+        available_font_ids.insert(FONT_MEDIUM_ID, font_instance_medium_id);
+
         let font_instance_small_id = renderer.context.add_font(::assets::FONT_ID, ::assets::FONT_SMALL_SIZE, Cursor::new(::assets::FONT));
         available_font_ids.insert(FONT_SMALL_ID, font_instance_small_id);
 
@@ -153,7 +157,7 @@ impl Game {
                     show_start_menu(&mut game_frame, self.renderer.context.display.get_context(),
                                     &self.renderer.context.shader_programs, &mut current_frame_ui);
                 },
-                GameState::Game(ref player_state) => {
+                GameState::Game(ref mut player_state) => {
                     show_game(&mut game_frame, self.renderer.context.display.get_context(),
                               &self.renderer.context.shader_programs,
                               player_state.physics_world.finalize(), &player_state.camera, &player_state);
@@ -169,23 +173,23 @@ impl Game {
 }
 
 /// Draw the start menu
-fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap, ui: &mut Ui) {
-
+fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap, ui: &mut Ui)
+{
     use glium::Surface;
     use texture::TargetPixelRegion;
     use ui::{Ui, UiRect, UiRendererData, UiActions};
 
     frame.clear_screen(Color::light_blue());
 
-    let main_font = frame.get_font(FONT_BIG_ID);
+    let big_font = frame.get_font(FONT_BIG_ID);
+    let medium_font = frame.get_font(FONT_MEDIUM_ID);
     let small_font = frame.get_font(FONT_SMALL_ID);
 
     let (w, h) = frame.frame.get_dimensions();
     let center_w = w as f32 / 2.0;
     let center_h = h as f32 / 2.0;
 
-    draw_text_with_shadow(frame, ::assets::GAME_TITLE, &main_font, 0.3, center_w, 2);
-    draw_text_with_shadow(frame, "(C) Felix Schütt", &small_font, 0.8, center_w, 1);
+    draw_text_with_shadow(frame, ::assets::GAME_TITLE, &big_font, 0.3, center_w, 2);
     draw_text_with_shadow(frame, "Ludum Dare 40", &small_font, 0.85, center_w, 1);
 
     let start_game_button_width = 190.0; // px
@@ -225,12 +229,20 @@ fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>, shaders: &Shade
         }
     }
 
-    draw_text_with_shadow(frame, "Start Game", &small_font, 0.5, center_w, 0);
+    let start_game_text = "Start Game";
+    let font_width = frame.calculate_font_width(&medium_font, start_game_text);
+    let text = Text {
+        font: &medium_font,
+        text: start_game_text,
+        screen_x: (center_w as u32) - ((font_width / 2.0) as u32),
+        screen_y: (center_h as u32) - (medium_font.font_size / 2)
+    };
+    frame.draw_font(&text, Color::black());
 }
 
 fn draw_text_with_shadow(frame: &mut GameFrame, text: &str, font: &FontInstanceId,
-                                  offset_y: f32, offset_x: f32, shadow_offset: u32) {
-
+                                  offset_y: f32, offset_x: f32, shadow_offset: u32)
+{
     use glium::Surface;
 
     // calculate centered position of the text and draw text
@@ -264,30 +276,86 @@ fn show_game(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashM
     let initial_floor_height = 25.0;
     let big_font = frame.get_font(FONT_BIG_ID);
 
-    let height_in_screen_pixels = ((player_state.highscore / 10.0) + initial_floor_height) as u32;
+    let height_in_screen_pixels = ((player_state.highscore) + initial_floor_height) as u32;
+    let font_offset = 25;
 
-    frame.draw_font(&Text { font: &big_font, text: &score, screen_x: 50 - 2, screen_y: height_in_screen_pixels - 4 }, Color::black());
-    frame.draw_font(&Text { font: &big_font, text: &score, screen_x: 50, screen_y: height_in_screen_pixels }, Color::white());
+    frame.draw_font(&Text { font: &big_font, text: &score, screen_x: 25 + 2, screen_y: height_in_screen_pixels  + font_offset - 4 }, Color::black());
+    frame.draw_font(&Text { font: &big_font, text: &score, screen_x: 25, screen_y: height_in_screen_pixels + font_offset }, Color::white());
 
-    draw_highscore_line_test(frame, display, height_in_screen_pixels);
+    draw_highscore_line(frame, display, height_in_screen_pixels, shaders);
 }
 
-fn draw_highscore_line_test(frame: &mut GameFrame, display: &Rc<Context>, line_height: u32)
+fn draw_ground(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap) {
+
+}
+
+fn draw_highscore_line(frame: &mut GameFrame, display: &Rc<Context>, line_height: u32, shaders: &ShaderHashMap)
 {
     use glium::Surface;
     use glium::DrawParameters;
+    use texture::PixelScreenVert;
+    use glium::VertexBuffer;
 
     // 100 pixel = 10 points in height of the highscore line
     // line is drawn using GL_LINES
     let (w, h) = frame.frame.get_dimensions();
 
-    let mut x_val = 0;
+    let mut verts_a = Vec::with_capacity(20);
+    let mut verts_b = Vec::with_capacity(20);
+
+    let mut x_val = 10;
     while x_val < w {
+        verts_a.push(PixelScreenVert {
+            position:   [(x_val + 2) as f32,
+                         line_height as f32,
+                         0.2],
+            tex_coords: [0.0, 0.0]
+        });
+        verts_b.push(PixelScreenVert {
+            position:   [x_val as f32,
+                         (line_height + 2) as f32,
+                         0.2],
+            tex_coords: [0.0, 0.0]
+        });
+        x_val += 40;
+
+        verts_a.push(PixelScreenVert {
+            position:   [(x_val + 2) as f32,
+                         line_height as f32,
+                         0.2],
+            tex_coords: [0.0, 0.0]
+        });
+        verts_b.push(PixelScreenVert {
+            position:   [x_val as f32,
+                         (line_height + 2) as f32,
+                         0.2],
+            tex_coords: [0.0, 0.0]
+        });
         x_val += 20;
-        x_val += 50;
     }
 
+    let vbuf_a = VertexBuffer::new(display, &verts_a).unwrap();
+    let vbuf_b = VertexBuffer::new(display, &verts_b).unwrap();
+
     let draw_parameters = DrawParameters {
+        line_width: Some(9.0),
         .. Default::default()
     };
+
+    let uniforms = uniform!{
+        window_width: w as f32,
+        window_height: h as f32,
+        in_color: [0.0_f32, 0.0, 0.0, 1.0],
+    };
+
+    let program = shaders.get(::context::PIXEL_TO_SCREEN_SHADER_LINE_ONLY_ID).unwrap();
+    frame.frame.draw(&vbuf_a, ::context::NO_INDICES_BUFFER_LINE, program, &uniforms, &draw_parameters).unwrap();
+
+    let uniforms = uniform!{
+        window_width: w as f32,
+        window_height: h as f32,
+        in_color: [0.9_f32, 0.9, 0.9, 1.0],
+    };
+
+    frame.frame.draw(&vbuf_b, ::context::NO_INDICES_BUFFER_LINE, program, &uniforms, &draw_parameters).unwrap();
 }

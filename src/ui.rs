@@ -24,7 +24,7 @@ pub struct Ui {
 
 impl Ui {
     // Returns a mutable renference if the tag (the ID)
-    pub fn get_mut_rect_by_tag(&mut self, tag: &str) -> &mut UiRect<UiRendererData> {
+    pub fn get_mut_rect_by_tag<'a>(&'a mut self, tag: &'static str) -> &'a mut UiRect<UiRendererData> {
         self.rectangles.iter_mut().filter(|rect| rect.data.tag == Some(tag)).next().unwrap()
     }
 }

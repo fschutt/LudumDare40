@@ -6,12 +6,13 @@ authors = ["Felix Schütt <felix.schuett@maps4print.com>"]
 [dependencies]
 glium_text = { git = "https://github.com/fschutt/glium_text" }
 image = "0.17.0"
-failure = "0.1.1"
-log = "0.3.8"
-fern = "0.4.3"
 twox-hash = "1.1.0"
 nphysics2d = "0.7.2"
-rodio = "0.5.2"
+
+[dependencies.rodio]
+git = "https://github.com/tomaka/rodio"
+default-features = false
+features = ["vorbis"]
 
 [dependencies.glium]
 git = "https://github.com/fschutt/glium-backport"
@@ -22,3 +23,7 @@ features = ["glutin"]
 panic = "abort"
 debug = false
 lto = true
+
+# cross compile: i686-pc-windows-gnu
+[package.metadata]
+rustc-env = "PKG_CONFIG_ALLOW_CROSS=1"

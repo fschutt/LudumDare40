@@ -51,7 +51,7 @@ pub struct TextureInstanceId {
     pub target_texture_region: TargetPixelRegion,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct PixelScreenVert {
     pub position: [f32;3],
     pub tex_coords: [f32;2],

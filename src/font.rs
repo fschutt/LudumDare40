@@ -1,17 +1,13 @@
 //! Font data that needs to be rendered
 
-use FastHashMap;
-use std::ops::Deref;
-use std::collections::HashMap;
 use glium_text::{self, TextSystem, FontTexture, TextDisplay};
 use glium::backend::Facade;
-use std::io::Read;
-
 use glium::Frame;
 
-use twox_hash::XxHash;
-use std::hash::BuildHasherDefault;
+use std::io::Read;
+
 use color::Color;
+use FastHashMap;
 
 #[derive(Debug, Copy, Clone, Hash, PartialEq, Eq)]
 pub struct FontInstanceId {
