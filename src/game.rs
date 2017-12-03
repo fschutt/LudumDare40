@@ -122,18 +122,24 @@ fn show_start_menu(frame: &mut GameFrame) {
 
     frame.clear_screen(Color::light_blue());
 
-    // calculate centered position of the text
+    // calculate centered position of the text and draw text
+    let main_font = frame.get_font(FONT_BIG_ID);
+    let text = ::assets::GAME_TITLE;
     let (w, h) = frame.frame.get_dimensions();
+    let font_width = frame.calculate_font_width(&main_font, text);
+    let screen_x = (w / 2) - (font_width / 2.0) as u32;
+    let screen_y = h - (0.3 * h as f32) as u32;
 
-    let text = Text {
-        font: frame.get_font(FONT_BIG_ID),
-        text: "Hello",
-        screen_x: 20,
-        screen_y: 0
-    };
+    let text = Text { font: &main_font, text: text, screen_x: screen_x, screen_y: screen_y };
 
-    // draw main menu text
+    let mut shadow_text = text.clone();
+    let shadow_offset = 2;
+    shadow_text.screen_x += shadow_offset;
+    shadow_text.screen_y -= shadow_offset * 2;
+
+    frame.draw_font(&shadow_text, Color::black());
     frame.draw_font(&text, Color::white());
+
 }
 
 // Draw the actual game

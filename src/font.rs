@@ -48,6 +48,13 @@ impl FontSystem {
         id
     }
 
+    pub fn calculate_font_width(&self, id: &FontInstanceId, text: &str) -> f32 {
+        let font_height = id.font_size;
+        let glium_font = self.fonts.get(id).unwrap();
+        let glium_text = glium_text::TextDisplay::new(&self.text_system, glium_font, text);
+        glium_text.get_width() * (font_height as f32)
+    }
+
     // draw the text to the screen
     pub fn draw_font(&self, frame: &mut Frame, text: &Text, color: Color) {
         use glium::Surface;
@@ -58,8 +65,8 @@ impl FontSystem {
         let (w, h) = frame.get_dimensions();
         let font_size = text.font.font_size;
         let scale_factor = font_size as f32 / w as f32 * 2.0;
-        let pos_x = (text.screen_x as f32 / w as f32) -1.0;
-        let pos_y = (text.screen_y as f32 / h as f32) -1.0;
+        let pos_x = (text.screen_x as f32 / w as f32 * 2.0) - 1.0;
+        let pos_y = (text.screen_y as f32 / h as f32 * 2.0) - 1.0;
 
         let matrix: [[f32; 4]; 4] =
         [
@@ -80,7 +87,7 @@ impl FontSystem {
 
 #[derive(Debug, Copy, Clone)]
 pub struct Text<'a> {
-    pub font: FontInstanceId,
+    pub font: &'a FontInstanceId,
     /// The text that should be displayed
     pub text: &'a str,
     /// X and Y position of the text
@@ -89,7 +96,7 @@ pub struct Text<'a> {
 }
 
 impl<'a> Text<'a> {
-    pub fn new(font: FontInstanceId, text: &'a str, x: u32, y: u32) -> Self {
+    pub fn new(font: &'a FontInstanceId, text: &'a str, x: u32, y: u32) -> Self {
         Self {
             font: font,
             text: text,

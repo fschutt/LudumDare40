@@ -48,7 +48,7 @@ impl OpenGlContext {
             .with_min_dimensions(600, 400)
             .with_srgb(None)
             .with_multisampling(4)
-            .with_title(format!("StackBoxes version {}", env!("CARGO_PKG_VERSION")))
+            .with_title(format!("{} version {}", ::assets::GAME_TITLE, env!("CARGO_PKG_VERSION")))
             .build_glium()
             .map_err(|_e| AppError { })?;
 

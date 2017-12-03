@@ -40,6 +40,10 @@ impl<'a> GameFrame<'a> {
         *texture_id.unwrap()
     }
 
+    pub fn calculate_font_width(&self, id: &FontInstanceId, text: &str) -> f32 {
+        self.context.font_system.calculate_font_width(id, text)
+    }
+
     pub fn draw_font(&mut self, text: &Text, color: Color) {
         self.context.font_system.draw_font(&mut self.frame, text, color);
     }
