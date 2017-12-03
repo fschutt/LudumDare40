@@ -7,12 +7,11 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 #![allow(unused_macros)]
+#![allow(unused_doc_comment)]
 
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
-#![allow(unused_doc_comment)]
-#![warn(missing_copy_implementations,
-        trivial_numeric_casts,
+#![warn(trivial_numeric_casts,
         trivial_casts,
         unused_qualifications)]
 #![cfg_attr(feature = "clippy", warn(cast_possible_truncation))]
@@ -48,34 +47,24 @@ pub mod errors;
 pub mod color;
 pub mod audio;
 pub mod game;
+pub mod render_data;
+pub mod font;
+pub mod texture;
+pub mod physics;
+pub mod assets;
+pub mod camera;
+pub mod frame;
 
 use game::Game;
+
+pub type FastHashMap<T, U> = ::std::collections::HashMap<T, U, ::std::hash::BuildHasherDefault<::twox_hash::XxHash>>;
+pub type FontInstanceIdMap = FastHashMap<&'static str, font::FontInstanceId>;
+pub type TextureInstanceIdMap = FastHashMap<&'static str, texture::TextureInstanceId>;
 
 fn main() {
     set_up_logging();
     let mut game = Game::new(800, 600);
     game.run_main_loop();
-}
-
-fn write_to_screen(text: &str) {
-    /*
-        // The `TextSystem` contains the shaders and elements used for text display.
-        let system = glium_text::TextSystem::new(&display);
-
-        // Creating a `FontTexture`, which a regular `Texture` which contains the font.
-        // Note that loading the systems fonts is not covered by this library.
-        let font = glium_text::FontTexture::new(&display, std::fs::File::open(&std::path::Path::new("my_font.ttf")).unwrap(), 24).unwrap();
-
-        // Creating a `TextDisplay` which contains the elements required to draw a specific sentence.
-        let text = glium_text::TextDisplay::new(&system, &font, text);
-
-        // Finally, drawing the text is done like this:
-        let matrix = [[1.0, 0.0, 0.0, 0.0],
-                      [0.0, 1.0, 0.0, 0.0],
-                      [0.0, 0.0, 1.0, 0.0],
-                      [0.0, 0.0, 0.0, 1.0]];
-        glium_text::draw(&text, &system, &mut display.draw(), matrix, (1.0, 1.0, 0.0, 1.0));
-    */
 }
 
 /// Sets up the global logger

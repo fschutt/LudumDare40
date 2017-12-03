@@ -182,7 +182,6 @@ impl WindowState
         event: &glium::glutin::Event,
     ) -> (bool, bool)
     {
-        println!("got event: {:?}", event);
         // update the state of the input information
         use glium::glutin::Event::*;
 

@@ -4,8 +4,7 @@ version = "0.1.0"
 authors = ["Felix Schütt <felix.schuett@maps4print.com>"]
 
 [dependencies]
-glium_text = "0.11.0"
-glium = { git = "https://github.com/fschutt/glium-backport", branch = "glium_backport" }
+glium_text = { git = "https://github.com/fschutt/glium_text" }
 image = "0.17.0"
 failure = "0.1.1"
 log = "0.3.8"
@@ -14,6 +13,11 @@ tinyfiledialogs = "3.0.4"
 twox-hash = "1.1.0"
 nphysics2d = "0.7.2"
 rodio = "0.5.2"
+
+[dependencies.glium]
+git = "https://github.com/fschutt/glium-backport"
+branch = "glium_backport"
+features = ["glutin"]
 
 [profile.release]
 panic = "abort"
