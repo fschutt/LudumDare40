@@ -1,11 +1,14 @@
-use glium::Frame;
+use glium::{Program, Frame};
 use audio::AudioContext;
 use {TextureInstanceIdMap, FontInstanceIdMap};
 use color::Color;
 use font::FontInstanceId;
-use texture::TextureInstanceId;
+use texture::{TextureId, TextureInstanceId};
 use context::OpenGlContext;
 use font::Text;
+use std::rc::Rc;
+use glium::backend::Context;
+use ShaderHashMap;
 
 /// This does NOT represent just the screen, it
 /// represents everything that can be done in 1/60th of a sencond.
@@ -35,7 +38,7 @@ impl<'a> GameFrame<'a> {
         *font_id.unwrap()
     }
 
-    pub fn get_texture(&self, id: &'static str) -> TextureInstanceId {
+    pub fn get_texture(&self, id: &'static str) -> TextureId {
         let texture_id = self.texture_ids.get(id);
         *texture_id.unwrap()
     }
@@ -46,6 +49,11 @@ impl<'a> GameFrame<'a> {
 
     pub fn draw_font(&mut self, text: &Text, color: Color) {
         self.context.font_system.draw_font(&mut self.frame, text, color);
+    }
+
+    pub fn draw_texture(&mut self, display: Rc<Context>, texture_id: &TextureInstanceId, transparency: f32, shaders: &ShaderHashMap)
+    {
+        self.context.texture_system.draw_texture(&mut self.frame, display, texture_id, transparency, shaders);
     }
 
     pub fn drop(self) {

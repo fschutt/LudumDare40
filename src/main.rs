@@ -36,10 +36,6 @@ extern crate twox_hash;
 extern crate nphysics2d;
 extern crate rodio;
 
-macro_rules! fast_hashmap {
-    ($T:ident, $U:ident) => (::std::collections::HashMap<$T, $U, ::std::hash::BuildHasherDefault<::twox_hash::XxHash>>::new();)
-}
-
 pub mod input;
 pub mod renderer;
 pub mod context;
@@ -54,12 +50,15 @@ pub mod physics;
 pub mod assets;
 pub mod camera;
 pub mod frame;
+pub mod ui;
+pub mod player_state;
 
 use game::Game;
 
 pub type FastHashMap<T, U> = ::std::collections::HashMap<T, U, ::std::hash::BuildHasherDefault<::twox_hash::XxHash>>;
 pub type FontInstanceIdMap = FastHashMap<&'static str, font::FontInstanceId>;
-pub type TextureInstanceIdMap = FastHashMap<&'static str, texture::TextureInstanceId>;
+pub type TextureInstanceIdMap = FastHashMap<&'static str, texture::TextureId>;
+pub type ShaderHashMap = FastHashMap<&'static str, ::glium::Program>;
 
 fn main() {
     set_up_logging();

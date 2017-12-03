@@ -4,6 +4,7 @@ use glium;
 use glium::glutin::MouseCursor;
 
 use std::time::{Duration, Instant};
+use ui::{UiRect, UiRendererData};
 
 // Shortcuts, hard-coded
 pub const SHORTCUT_MOVE_LEFT: KbShortcut = KbShortcut { modifier: None, key: 'd' };
@@ -656,20 +657,11 @@ fn check_available_actions(current: &NodeRef<Rect<UiRendererData>>,
 }
 */
 
-#[derive(Debug, Copy, Clone)]
-pub struct UiRendererData;
-
-pub struct Rect<T> {
-    x: [f32;4],
-    y: [f32;4],
-    data: Box<T>,
-}
-
 #[inline]
 pub fn check_point_in_rect(
     x: f32,
     y: f32,
-    rect: &Rect<UiRendererData>,
+    rect: &UiRect<UiRendererData>,
 ) -> bool
 {
     let min = (rect.x[0], rect.y[0]);

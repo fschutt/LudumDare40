@@ -3,6 +3,7 @@
 //! Calculates the physics for the game world, returns a description of the world
 //! in world coordinates
 
+#[derive(Clone)]
 pub struct PhysicsWorld {
 
 }

@@ -1,7 +1,8 @@
 //! Main game state
 
-use renderer::Renderer;
+use player_state::PlayerState;
 use camera::Camera;
+use renderer::Renderer;
 use audio::AudioContext;
 use color::Color;
 use physics::{PhysicsWorld, PhysicsFinalizedData};
@@ -10,9 +11,13 @@ use font::FontInstanceId;
 use texture::TextureInstanceId;
 use frame::GameFrame;
 use font::Text;
+use std::rc::Rc;
+use glium::backend::Context;
 
 pub const FONT_BIG_ID: &str = "font_fredoka_big";
 pub const FONT_SMALL_ID: &str = "font_fredoka_small";
+
+pub const TEXTURE_START_GAME_ID: &str = "texture_start_game";
 
 pub struct Game {
     pub renderer: Renderer,
@@ -23,6 +28,7 @@ pub struct Game {
 }
 
 /// what the state of the game currently is (what should be drawn on the screen)
+#[derive(Clone)]
 pub enum GameState {
     /// The start menu should be rendered
     StartMenu,
@@ -30,35 +36,36 @@ pub enum GameState {
     Game(Box<PlayerState>),
 }
 
-///
-pub struct PlayerState {
-    pub camera: Camera,
-    pub physics_world: PhysicsWorld,
-    pub highscore: u32,
-}
-
 impl Game {
 
-    /// Initializes the audio and renderer, adds all the fonts, and textures
+    /// Initializes the audio and renderer, adds all the fonts, and textures and shaders
     pub fn new(width: u32, height: u32) -> Self {
 
         use std::io::Cursor;
 
-        // initialize audio first so that the player knows the game doesn't hang
+        // -- initialize audio
         let audio_context = AudioContext::new();
         audio_context.send_msg(::audio::AUDIO_MSG_PLAY_TITLE_SCREEN_SONG).unwrap();
 
+        // -- initialize shaders
         let mut renderer = Renderer::new(width, height).unwrap();
 
-        // load fonts and texture needed for the game
-        let font_instance_big_id = renderer.context.add_font(::assets::FONT_ID, ::assets::FONT_BIG_SIZE, Cursor::new(::assets::FONT));
-        let font_instance_small_id = renderer.context.add_font(::assets::FONT_ID, ::assets::FONT_SMALL_SIZE, Cursor::new(::assets::FONT));
+        // -- initialize fonts
+        let mut available_font_ids = FontInstanceIdMap::default();
 
-        let mut available_font_ids = FastHashMap::<&'static str, FontInstanceId>::default();
+        let font_instance_big_id = renderer.context.add_font(::assets::FONT_ID, ::assets::FONT_BIG_SIZE, Cursor::new(::assets::FONT));
         available_font_ids.insert(FONT_BIG_ID, font_instance_big_id);
+
+        let font_instance_small_id = renderer.context.add_font(::assets::FONT_ID, ::assets::FONT_SMALL_SIZE, Cursor::new(::assets::FONT));
         available_font_ids.insert(FONT_SMALL_ID, font_instance_small_id);
 
-        let available_texture_ids = FastHashMap::<&'static str, TextureInstanceId>::default();
+        // -- initialize textures
+        let mut available_texture_ids = TextureInstanceIdMap::default();
+
+        let font_instance_big_id = renderer.context.add_font(::assets::FONT_ID, ::assets::FONT_BIG_SIZE, Cursor::new(::assets::FONT));
+        let texture_start_game = renderer.context.add_texture_png(::assets::START_SCREEN_BUTTON_00_ID, Cursor::new(::assets::START_SCREEN_BUTTON_00));
+        available_texture_ids.insert(TEXTURE_START_GAME_ID, texture_start_game);
+
         // insert textures here
 
         Self {
@@ -94,12 +101,15 @@ impl Game {
                 texture_ids: &self.available_texture_ids
             };
 
+            use glium::backend::Facade;
+
             match self.game_state {
                 GameState::StartMenu => {
-                    show_start_menu(&mut game_frame);
+                    show_start_menu(&mut game_frame, self.renderer.context.display.get_context());
                 },
                 GameState::Game(ref player_state) => {
-                    draw_game(&mut game_frame, player_state.physics_world.finalize(), &player_state.camera);
+                    draw_game(&mut game_frame, self.renderer.context.display.get_context(),
+                              player_state.physics_world.finalize(), &player_state.camera);
                 }
             }
 
@@ -117,32 +127,81 @@ impl Game {
 
 
 /// Draw the start menu
-fn show_start_menu(frame: &mut GameFrame) {
+fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>) {
     use glium::Surface;
 
     frame.clear_screen(Color::light_blue());
 
-    // calculate centered position of the text and draw text
     let main_font = frame.get_font(FONT_BIG_ID);
-    let text = ::assets::GAME_TITLE;
-    let (w, h) = frame.frame.get_dimensions();
-    let font_width = frame.calculate_font_width(&main_font, text);
-    let screen_x = (w / 2) - (font_width / 2.0) as u32;
-    let screen_y = h - (0.3 * h as f32) as u32;
+    let small_font = frame.get_font(FONT_SMALL_ID);
 
-    let text = Text { font: &main_font, text: text, screen_x: screen_x, screen_y: screen_y };
+    draw_centered_text_with_shadow(frame, ::assets::GAME_TITLE, &main_font, 0.3, 2);
+    draw_centered_text_with_shadow(frame, "(C) Felix Schütt", &small_font, 0.8, 1);
+    draw_centered_text_with_shadow(frame, "Ludum Dare 40", &small_font, 0.85, 1);
+
+    let start_game_button_width = 50.0; // px
+    let start_game_button_height = 20.0; // px
+    let half_start_game_button_width  = start_game_button_width  / 2.0;
+    let half_start_game_button_height = start_game_button_height / 2.0;
+
+    let (w, h) = frame.frame.get_dimensions();
+    let center_w = w as f32 / 2.0;
+    let center_h = h as f32 / 2.0;
+
+    let left  = center_w - half_start_game_button_width;
+    let right = center_w + half_start_game_button_width;
+    let bottom = center_h - half_start_game_button_height;
+    let top = center_h + half_start_game_button_height;
+
+
+    use ui::{Ui, UiRect, UiRendererData, UiActions};
+
+    // draw "start game button"
+    // todo: seperate this out so the input module has access to it
+    let start_game_ui = Ui {
+        rectangles: vec![UiRect {
+            // tl, tr, bl, br
+            x: [left, right, left, right],
+            y: [top, top, bottom, bottom],
+            data: Box::new(UiRendererData {
+                color: None,
+                image: None, // TODO: add button image!
+                text: None,
+                actions: UiActions::empty(), // TODO: add button callback!
+            })
+        }],
+    };
+
+    for rect in start_game_ui.rectangles.into_iter() {
+
+    }
+}
+
+fn draw_centered_text_with_shadow(frame: &mut GameFrame, text: &str, font: &FontInstanceId, offset_y: f32, shadow_offset: u32) {
+
+    use glium::Surface;
+
+    // calculate centered position of the text and draw text
+    let (w, h) = frame.frame.get_dimensions();
+    let font_width = frame.calculate_font_width(&font, text);
+    let screen_x = (w / 2) - (font_width / 2.0) as u32;
+    let screen_y = h - (offset_y * h as f32) as u32;
+
+    let text = Text { font: &font, text: text, screen_x: screen_x, screen_y: screen_y };
 
     let mut shadow_text = text.clone();
-    let shadow_offset = 2;
     shadow_text.screen_x += shadow_offset;
     shadow_text.screen_y -= shadow_offset * 2;
 
     frame.draw_font(&shadow_text, Color::black());
     frame.draw_font(&text, Color::white());
-
 }
 
 // Draw the actual game
-fn draw_game(frame: &mut GameFrame, data: PhysicsFinalizedData, camera: &Camera) {
+fn draw_game(frame: &mut GameFrame, display: &Rc<Context>, data: PhysicsFinalizedData, camera: &Camera) {
+    // draw highscore
+    let score = "40";
+    let small_font = frame.get_font(FONT_SMALL_ID);
 
+    draw_centered_text_with_shadow(frame, score, &small_font, 0.3, 1);
 }
