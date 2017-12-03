@@ -6,7 +6,7 @@ use renderer::Renderer;
 use audio::AudioContext;
 use color::Color;
 use physics::{PhysicsWorld, PhysicsFinalizedData};
-use {FontInstanceIdMap, TextureInstanceIdMap, FastHashMap};
+use {ShaderHashMap, FontInstanceIdMap, TextureInstanceIdMap, FastHashMap};
 use font::FontInstanceId;
 use texture::TextureInstanceId;
 use frame::GameFrame;
@@ -105,10 +105,12 @@ impl Game {
 
             match self.game_state {
                 GameState::StartMenu => {
-                    show_start_menu(&mut game_frame, self.renderer.context.display.get_context());
+                    show_start_menu(&mut game_frame, self.renderer.context.display.get_context(),
+                                    &self.renderer.context.shader_programs);
                 },
                 GameState::Game(ref player_state) => {
                     draw_game(&mut game_frame, self.renderer.context.display.get_context(),
+                              &self.renderer.context.shader_programs,
                               player_state.physics_world.finalize(), &player_state.camera);
                 }
             }
@@ -127,8 +129,9 @@ impl Game {
 
 
 /// Draw the start menu
-fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>) {
+fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap) {
     use glium::Surface;
+    use texture::TargetPixelRegion;
 
     frame.clear_screen(Color::light_blue());
 
@@ -156,6 +159,13 @@ fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>) {
 
     use ui::{Ui, UiRect, UiRendererData, UiActions};
 
+    let start_button_target_pixel_region = TargetPixelRegion {
+        screen_bottom_x: left as u32,
+        screen_bottom_y: bottom as u32,
+        screen_width: start_game_button_width as u32,
+        screen_height: start_game_button_height as u32,
+    };
+
     // draw "start game button"
     // todo: seperate this out so the input module has access to it
     let start_game_ui = Ui {
@@ -165,7 +175,10 @@ fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>) {
             y: [top, top, bottom, bottom],
             data: Box::new(UiRendererData {
                 color: None,
-                image: None, // TODO: add button image!
+                image: Some(TextureInstanceId {
+                    source_texture_region: ::assets::START_SCREEN_BUTTON_00_TX_STR,
+                    target_texture_region: start_button_target_pixel_region,
+                }),
                 text: None,
                 actions: UiActions::empty(), // TODO: add button callback!
             })
@@ -173,8 +186,12 @@ fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>) {
     };
 
     for rect in start_game_ui.rectangles.into_iter() {
-
+        if let Some(texture_instance_id) = rect.data.image {
+            frame.draw_texture(display, &texture_instance_id, 0.7, shaders);
+        }
     }
+
+    draw_centered_text_with_shadow(frame, "Start Game!", &small_font, 0.5, 0);
 }
 
 fn draw_centered_text_with_shadow(frame: &mut GameFrame, text: &str, font: &FontInstanceId, offset_y: f32, shadow_offset: u32) {
@@ -198,7 +215,7 @@ fn draw_centered_text_with_shadow(frame: &mut GameFrame, text: &str, font: &Font
 }
 
 // Draw the actual game
-fn draw_game(frame: &mut GameFrame, display: &Rc<Context>, data: PhysicsFinalizedData, camera: &Camera) {
+fn draw_game(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap, data: PhysicsFinalizedData, camera: &Camera) {
     // draw highscore
     let score = "40";
     let small_font = frame.get_font(FONT_SMALL_ID);

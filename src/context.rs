@@ -12,8 +12,8 @@ use ShaderHashMap;
 use font::FontInstanceId;
 use texture::{TextureId, TextureSystem};
 
-/// No indices
-pub const NO_INDICES_BUFFER: NoIndices = NoIndices(PrimitiveType::TrianglesList);
+/// No indices, Triangle Strip
+pub const NO_INDICES_BUFFER: NoIndices = NoIndices(PrimitiveType::TriangleStrip);
 pub const PIXEL_TO_SCREEN_SHADER_ID: &str = "pixel_to_screen_shader";
 pub const PIXEL_TO_SCREEN_VERT_SHADER_SOURCE: &str = include_str!("../shaders/pixel_to_screen_space.vert.glsl");
 pub const PIXEL_TO_SCREEN_FRAG_SHADER_SOURCE: &str = include_str!("../shaders/pixel_to_screen_space.frag.glsl");

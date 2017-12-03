@@ -51,7 +51,7 @@ impl<'a> GameFrame<'a> {
         self.context.font_system.draw_font(&mut self.frame, text, color);
     }
 
-    pub fn draw_texture(&mut self, display: Rc<Context>, texture_id: &TextureInstanceId, transparency: f32, shaders: &ShaderHashMap)
+    pub fn draw_texture(&mut self, display: &Rc<Context>, texture_id: &TextureInstanceId, transparency: f32, shaders: &ShaderHashMap)
     {
         self.context.texture_system.draw_texture(&mut self.frame, display, texture_id, transparency, shaders);
     }

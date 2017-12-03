@@ -9,7 +9,9 @@ use std::rc::Rc;
 use ShaderHashMap;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub struct TextureId(&'static str);
+pub struct TextureId {
+    pub texture_id: &'static str
+}
 
 #[derive(Default)]
 pub struct TextureSystem {
@@ -46,7 +48,7 @@ pub struct SourceTextureRegion {
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct TextureInstanceId {
     pub source_texture_region: SourceTextureRegion,
-    pub target_texture_retion: TargetPixelRegion,
+    pub target_texture_region: TargetPixelRegion,
 }
 
 #[derive(Copy, Clone)]
@@ -73,13 +75,13 @@ impl TextureSystem {
         let image = RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
         let opengl_texture = Texture2d::new(display, image).unwrap();
 
-        let id = TextureId(id);
+        let id = TextureId { texture_id: id };
         self.textures.insert(id.clone(), opengl_texture);
         id
     }
 
     // TODO: group textures by texture_id.source_texture_region.texture_id
-    pub fn draw_texture(&self, frame: &mut Frame, display: Rc<Context>,
+    pub fn draw_texture(&self, frame: &mut Frame, display: &Rc<Context>,
         texture_id: &TextureInstanceId, transparency: f32, shaders: &ShaderHashMap)
     {
         use glium::Surface;
@@ -88,7 +90,7 @@ impl TextureSystem {
         let texture = self.textures.get(&texture_id.source_texture_region.texture_id).unwrap();
         let (t_w, t_h) = texture.dimensions();
         let source_tr = &texture_id.source_texture_region.region;
-        let target_tr = &texture_id.target_texture_retion;
+        let target_tr = &texture_id.target_texture_region;
 
         let z = 1.0_f32;
         let top_left = PixelScreenVert {
@@ -140,8 +142,8 @@ impl TextureSystem {
             tex: texture,
         );
 
-        let vertex_buf = [top_left, top_right, bottom_left, bottom_right];
-        let vbuf = VertexBuffer::new(&display, &vertex_buf).unwrap();
+        let vertex_buf = [bottom_left, top_left, bottom_right, top_right];
+        let vbuf = VertexBuffer::new(display, &vertex_buf).unwrap();
         frame.draw(&vbuf, ::context::NO_INDICES_BUFFER, shader, &uniforms, &DrawParameters::default()).unwrap();
     }
 }
