@@ -26,10 +26,12 @@ impl<'a> GameFrame<'a> {
     // clear the screen
     pub fn clear_screen(&mut self, color: Color) {
         use glium::Surface;
-        self.frame.clear_color(color.r as f32 / 255.0,
-                               color.g as f32 / 255.0,
-                               color.b as f32 / 255.0,
-                               color.a as f32 / 255.0);
+        self.frame.clear_color_and_depth(
+            (color.r as f32 / 255.0,
+             color.g as f32 / 255.0,
+             color.b as f32 / 255.0,
+             color.a as f32 / 255.0),
+             1.0);
     }
 
     // notice: panics if the font isn't valid!!!

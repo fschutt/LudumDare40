@@ -5,6 +5,7 @@ use context::OpenGlContext;
 pub struct Renderer
 {
     pub context: OpenGlContext,
+    /// The window state of the current frame
     pub window_state: WindowState,
 }
 

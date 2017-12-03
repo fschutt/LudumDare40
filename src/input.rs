@@ -1,10 +1,11 @@
 //! Input handling module, handles incoming events for the window
 
 use glium;
-use glium::glutin::MouseCursor;
+use glium::glutin::{Event, MouseCursor, ElementState,VirtualKeyCode, MouseButton};
 
 use std::time::{Duration, Instant};
-use ui::{UiRect, UiRendererData};
+use ui::{Ui, UiRect, UiRendererData};
+use game::GameState;
 
 // Shortcuts, hard-coded
 pub const SHORTCUT_MOVE_LEFT: KbShortcut = KbShortcut { modifier: None, key: 'd' };
@@ -27,7 +28,7 @@ pub struct KbShortcut
 pub struct KeyboardState
 {
     /// Modifier keys that are currently actively pressed during this cycle
-    pub modifiers: Vec<glium::glutin::VirtualKeyCode>,
+    pub modifiers: Vec<VirtualKeyCode>,
     /// Hidden keys, such as the "n" in CTRL + n. Always lowercase
     pub hidden_keys: Vec<char>,
     /// Actual keys pressed during this cycle (i.e. regular text input)
@@ -107,10 +108,6 @@ pub struct MouseState
     pub mouse_scroll_x: f32,
     /// How far has the mouse scrolled in y direction?
     pub mouse_scroll_y: f32,
-    //// Mulitplier for the scroll speed in x direction
-    pub scroll_speed_x: f32,
-    //// Mulitplier for the scroll speed in y direction
-    pub scroll_speed_y: f32,
 }
 
 impl MouseState
@@ -118,10 +115,7 @@ impl MouseState
     /// Creates a new mouse state
     /// Input: How fast the scroll (mouse) should be converted into pixels
     /// Usually around 10.0 (10 pixels per mouse wheel line)
-    pub fn new(
-        scroll_speed_x: f32,
-        scroll_speed_y: f32,
-    ) -> Self
+    pub fn new() -> Self
     {
         MouseState {
             mouse_cursor_type: MouseCursor::Default,
@@ -131,8 +125,6 @@ impl MouseState
             middle_down: false,
             mouse_scroll_x: 0.0,
             mouse_scroll_y: 0.0,
-            scroll_speed_x: scroll_speed_x,
-            scroll_speed_y: scroll_speed_y,
         }
     }
 }
@@ -152,7 +144,7 @@ pub struct WindowState
     /// Time of the last rendering update, set after the `redraw()` method
     pub time_of_last_update: Instant,
     /// Minimum frame time
-    min_frame_time: Duration,
+    pub min_frame_time: Duration,
 }
 
 impl WindowState
@@ -165,7 +157,7 @@ impl WindowState
     {
         Self {
             keyboard_state: KeyboardState::new(),
-            mouse_state: MouseState::new(100.0, 100.0),
+            mouse_state: MouseState::new(),
             width,
             height,
             time_of_last_update: Instant::now(),
@@ -176,65 +168,40 @@ impl WindowState
 
     /// Handles the event, updates the UI, then returns if the window was not
     /// closed (false on closed)
-    /// The second bool determines if the window should redraw itself
     #[inline]
     pub(crate) fn handle_event(
         &mut self,
-        event: &glium::glutin::Event,
-    ) -> (bool, bool)
+        event: &Event,
+        ui: &Ui,
+        game_state: &mut GameState,
+    ) -> bool
     {
         // update the state of the input information
         use glium::glutin::Event::*;
 
-        let mut should_redraw = true;
-
         // this will be true if the UI (drawn on top of the map) has already handled
         // the incoming event for example, we don't want a click on the UI to be
         // received as a click on the map
-        let (ui_handles_event, update_renderer) = self.ui_handle_event(event);
+        let _ui_handles_event = self.ui_handle_event(ui, game_state, event);
 
-        if !ui_handles_event {
-            match *event {
-                Closed => {
-                    return (false, false);
-                },
-                MouseMoved(x, y) => {
-                    should_redraw = self.handle_mouse_move(x, y);
-                },
-                MouseWheel(delta, phase) => {
-                    should_redraw = self.handle_mouse_scroll(delta, phase);
-                },
-                KeyboardInput(state, code, vk_code) => {
-                    self.handle_keyboard_input(state, code, vk_code);
-                },
-                ReceivedCharacter(c) => {
-                    self.handle_received_character(c);
-                },
-                MouseInput(state, button) => {
-                    self.handle_mouse_click(state, button);
-                },
-                Resized(width, height) => {
-                    self.handle_resize(width, height);
-                },
-                Focused(b) => {
-                    self.handle_focus(b);
-                },
-                _ => {},
-            }
-        }
-        else {
-            should_redraw = update_renderer;
+        match *event {
+            Closed => return false,
+            MouseMoved(x, y) => { self.handle_mouse_move(game_state, x, y); },
+            KeyboardInput(state, _, vk_code) => { self.handle_vk_code(game_state, state, vk_code); },
+            MouseInput(state, button) => { self.handle_mouse_click(game_state, state, button); },
+            Resized(width, height) => { self.handle_resize(game_state, width, height); }
+            Focused(b) => { self.handle_focus(game_state, b); },
+            _ => { },
         }
 
-        // now that the state is updated, we have enough information to re-layout the
-        // frame
-        (true, should_redraw)
+        true
     }
 
     /// Handle the focus of a window
     #[inline]
     pub fn handle_focus(
         &mut self,
+        _game_state: &mut GameState,
         focused: bool,
     )
     {
@@ -247,6 +214,7 @@ impl WindowState
     #[inline]
     fn handle_resize(
         &mut self,
+        _game_state: &mut GameState,
         width: u32,
         height: u32,
     )
@@ -255,36 +223,36 @@ impl WindowState
         self.height = height;
     }
 
-    /// Updates mouse movement, returns if the screen needs to be redrawn
+    /// Updates mouse movement
     #[inline]
     fn handle_mouse_move(
         &mut self,
+        game_state: &mut GameState,
         x: i32,
         y: i32,
-    ) -> bool
+    )
     {
         if Instant::now().duration_since(self.time_of_last_update) < self.min_frame_time {
-            return false;
+            return;
         }
 
         let is_left_mouse_down = self.mouse_state.left_down;
 
         // no redraw needed if the mouse did not drag the map (todo: UI handling?)
         if !is_left_mouse_down {
-            self.mouse_state.mouse_cursor = Some((x, y));
-            return false;
+            self.mouse_state.mouse_cursor = Some((x, self.height as i32 - y));
+            return;
         }
 
         // dragging action
         let cur_mouse_cursor = self.mouse_state.mouse_cursor;
 
         if cur_mouse_cursor.is_none() {
-            self.mouse_state.mouse_cursor = Some((x, y));
-            return true;
+            self.mouse_state.mouse_cursor = Some((x, self.height as i32 - y));
+            return;
         }
 
-        self.mouse_state.mouse_cursor = Some((x, y));
-        true
+        self.mouse_state.mouse_cursor = Some((x, self.height as i32 - y));
     }
 
 
@@ -292,6 +260,7 @@ impl WindowState
     #[inline]
     fn handle_mouse_click(
         &mut self,
+        game_state: &mut GameState,
         state: ::glium::glutin::ElementState,
         button: ::glium::glutin::MouseButton,
     )
@@ -330,26 +299,6 @@ impl WindowState
         }
     }
 
-    /// Updates mouse scroll
-    #[inline]
-    fn handle_mouse_scroll(
-        &mut self,
-        delta: glium::glutin::MouseScrollDelta,
-        _phase: glium::glutin::TouchPhase,
-    ) -> bool
-    {
-        if Instant::now().duration_since(self.time_of_last_update) < self.min_frame_time
-        {
-            return false;
-        }
-
-        if let glium::glutin::MouseScrollDelta::LineDelta(_, y) = delta {
-            /* handle scrolling*/
-        }
-
-        true
-    }
-
     /// Checks if the there is a control character present. If yes, we will likely
     /// receive a
     /// "Character received" event later on. This is important because the
@@ -360,125 +309,90 @@ impl WindowState
     /// distinguish
     /// between the two
     #[inline]
-    fn handle_keyboard_input(
+    fn handle_vk_code(
         &mut self,
-        state: glium::glutin::ElementState,
-        _code: u8,
-        vk_code: Option<glium::glutin::VirtualKeyCode>,
-    )
-    {
-        use glium::glutin::ElementState;
-
-        if let Some(vk_code) = vk_code {
-            if state == ElementState::Pressed {
-                    self.keyboard_state.modifiers.push(vk_code);
-            } else {
-                let indices_found = self.keyboard_state.modifiers.iter().position(|e| *e == vk_code);
-                if let Some(index) = indices_found {
-                    self.keyboard_state.modifiers.remove(index);
-                }
+        _game_state: &mut GameState,
+        state: ElementState,
+        vk_code: Option<VirtualKeyCode>
+    ) {
+        if vk_code.is_none() { return; }
+        let vk_code = vk_code.unwrap();
+        if state == ElementState::Pressed {
+                self.keyboard_state.modifiers.push(vk_code);
+        } else {
+            let indices_found = self.keyboard_state.modifiers.iter().position(|e| *e == vk_code);
+            if let Some(index) = indices_found {
+                self.keyboard_state.modifiers.remove(index);
             }
-        }
-    }
-
-    /// Handles character input (via string). Some characters are wrongly
-    /// recognized as characters
-    /// when in reality, they are control characters.
-    #[inline]
-    fn handle_received_character(
-        &mut self,
-        key: char,
-    )
-    {
-        let keyboard = &mut self.keyboard_state;
-        keyboard.hidden_keys.clear();
-        keyboard.keys.clear();
-
-        if keyboard.modifiers.is_empty() {
-            // The key that is associated with the modifier key, so basically the "n" in
-            // Ctrl + n
-            let modifier_char_extra = key_to_character(key as u32);
-            if let Some(hidden_key) = modifier_char_extra {
-                // key is actually a ctrl + (cchar) key
-                if !keyboard.hidden_keys.iter().any(|elem| *elem == hidden_key) {
-                    keyboard.hidden_keys.push(hidden_key);
-                }
-            }
-        }
-        else {
-            keyboard.keys.push(key);
         }
     }
 
     /// Parent function that handles any incoming UI event and delegates it to the
-    /// rest of the UI
-    /// handling functions.
-    /// Returns (a, b) where
-    /// - a: this function already handles the mouse event
-    /// - b: the map needs to be redrawn
+    /// rest of the UI handling functions.
+    ///
+    /// Returns if this function already handles the mouse event
     #[inline]
     pub fn ui_handle_event(
         &mut self,
-        event: &glium::glutin::Event,
-    ) -> (bool, bool)
+        ui: &Ui,
+        game_state: &mut GameState,
+        event: &Event,
+    ) -> bool
     {
-        use glium::glutin::Event::*;
+        use glium::glutin::Event;
 
-        let mut ui_is_already_handling_event = false;
-        let mut ui_should_redraw = false;
-
-        // for now the UI does not handle scrolling
-        // or global hotkeys such as CTRL + S
         let (old_x, old_y) = self.mouse_state.mouse_cursor.unwrap_or((-1, -1));
 
         // for now the UI does not handle scrolling
         // or global hotkeys such as CTRL + S
         match *event {
             // MouseMoved is for hover events and focusin / focusout
-            MouseMoved(x, y) => {
-                // TODO: update x, y of self?
-                ui_is_already_handling_event = self.ui_handle_mouse_move(x, y, old_x, old_y);
+            Event::MouseMoved(x, y) => {
+                self.ui_handle_mouse_move(ui, game_state, x, y, old_x, old_y)
             },
-            // MouseMoved is for onclick events, etc.
-            MouseInput(state, button) => {
-                ui_should_redraw = self.ui_handle_mouse_click(state, button);
+            // MouseInput is for onclick events
+            Event::MouseInput(state, button) => {
+                self.ui_handle_mouse_click(ui, game_state, state, button)
             },
-            _ => {},
+            _ => false
         }
-
-        (ui_is_already_handling_event, ui_should_redraw)
     }
 
     /// Checks if the mouse has moved over a UI element, calls the respective
     /// functions,
+    ///
     /// returns false if the event should propagate to underlying elements.
     pub fn ui_handle_mouse_move(
         &mut self,
+        ui: &Ui,
+        game_state: &mut GameState,
         x: i32,
         y: i32,
         old_x: i32,
         old_y: i32,
-    ) -> bool
-    {/*
-        let user_interfaces = renderer.user_interfaces.borrow();
-        let ui_id = if let Some(ui_id) = renderer.current_ui {
-            ui_id
-        }
-        else {
-            return false;
-        };
-        let ui = if let Some(ui) = user_interfaces.get(ui_id) {
-            ui
-        }
-        else {
-            return false;
-        };
+    )  -> bool
+    {
+        for rect in ui.rectangles.iter() {
+            let previous_point_in_rect = check_point_in_rect(old_x as f32, old_y as f32, &rect);
+            let current_point_in_rect = check_point_in_rect(x as f32, y as f32, &rect);
 
-        for child in ui.root.children() {
-            check_available_actions(&child, renderer, x, y, old_x, old_y, MOUSE_MOVE_EVENT);
+            // choose between mouseenter and mouseleave
+            if current_point_in_rect != previous_point_in_rect {
+                if current_point_in_rect {
+                    // call mouseenter event
+                    if let Some(fptr) = rect.data.actions.onmouseenter {
+                        return (fptr)(self, ui, game_state);
+                    }
+                } else {
+                    // call mouseleave event
+                    if let Some(fptr) = rect.data.actions.onmouseleave {
+                        return (fptr)(self, ui, game_state);
+                    }
+                }
+            }
         }
-    */
-        true
+
+        false
     }
 
     /// Checks if any element from the currently active UI was clicked, calls the
@@ -486,176 +400,26 @@ impl WindowState
     /// Returns if the screen should be updated.
     pub fn ui_handle_mouse_click(
         &mut self,
-        state: glium::glutin::ElementState,
-        _button: glium::glutin::MouseButton,
+        ui: &Ui,
+        game_state: &mut GameState,
+        state: ElementState,
+        _button: MouseButton,
     ) -> bool
     {
-        /*
+        let (x, y) = self.mouse_state.mouse_cursor.unwrap_or((-1, -1));
 
-        use glium::glutin::ElementState::*;
-
-        let user_interfaces = renderer.user_interfaces.borrow();
-        let ui_id = if let Some(ui_id) = renderer.current_ui {
-            ui_id
-        }
-        else {
-            return false;
-        };
-        let ui = if let Some(ui) = user_interfaces.get(ui_id) {
-            ui
-        }
-        else {
-            return false;
-        };
-
-        let window_state = renderer.window_state.borrow();
-
-        let mut should_update_screen = Vec::<bool>::new();
-
-        if let Some(cursor) = window_state.mouse_state.mouse_cursor {
-            match state {
-                Pressed => for child in ui.root.children() {
-                    should_update_screen.push(check_available_actions(
-                        &child,
-                        renderer,
-                        cursor.0,
-                        cursor.1,
-                        cursor.0,
-                        cursor.1,
-                        MOUSE_DOWN_EVENT
-                    ));
-                },
-                Released => for child in ui.root.children() {
-                    should_update_screen.push(check_available_actions(
-                        &child,
-                        renderer,
-                        cursor.0,
-                        cursor.1,
-                        cursor.0,
-                        cursor.1,
-                        MOUSE_UP_EVENT
-                    ));
-                },
+        if state == ElementState::Released {
+            for rect in ui.rectangles.iter() {
+                if !check_point_in_rect(x as f32, y as f32, &rect) { continue; }
+                if let Some(fptr) = rect.data.actions.onmouseup {
+                    return (fptr)(self, ui, game_state);
+                }
             }
         }
 
-        should_update_screen.iter().any(|e| *e)
-        */
-        true
+        false
     }
 }
-
-/// This function only returns valid results if there is a control character
-/// pressed at the
-/// same time. `glutin` will return characters such as `\u{32}` which are not
-/// helpful at all.
-///
-#[inline]
-fn key_to_character(key: u32) -> Option<char>
-{
-    match key {
-        25 => Some('y'),
-        24 => Some('x'),
-        22 => Some('v'),
-        3 => Some('c'),
-        13 => Some('m'),
-        2 => Some('b'),
-        14 => Some('n'),
-        1 => Some('a'),
-        19 => Some('s'),
-        4 => Some('d'),
-        6 => Some('f'),
-        7 => Some('g'),
-        8 => Some('h'),
-        10 => Some('j'),
-        11 => Some('k'),
-        12 => Some('l'),
-        39 |
-        45 |
-        59 => Some('Ã'),
-        /* 27  => { Some('Ã')}, // same as Esc?? */
-        16 => Some('p'),
-        15 => Some('o'),
-        9 => Some('i'),
-        21 => Some('u'),
-        26 => Some('z'),
-        20 => Some('t'),
-        18 => Some('r'),
-        5 => Some('e'),
-        23 => Some('w'),
-        17 => Some('q'),
-        0 => Some('2'),
-        27 => Some('3'),
-        28 => Some('4'),
-        29 => Some('5'),
-        30 => Some('6'),
-        31 => Some('7'),
-        32 => Some('8'),
-        33 => Some('9'),
-        _ => None,
-    }
-}
-
-
-/*
-/// Returns if the screen should be updated
-///
-/// "event" can currently be: m
-fn check_available_actions(current: &NodeRef<Rect<UiRendererData>>,
-                           renderer: &Renderer,
-                           x: i32,
-                           y: i32,
-                           old_x: i32,
-                           old_y: i32,
-                           event: &'static str)
-                           -> bool
-{
-    let mut should_update_screen = Vec::<bool>::new();
-
-    for child in current.children() {
-        let previous_point_in_rect = check_point_in_rect(old_x as f32, old_y as f32, &*child.borrow());
-        let current_point_in_rect = check_point_in_rect(x as f32, y as f32, &*child.borrow());
-
-        match event {
-            MOUSE_UP_EVENT   => {
-                if !current_point_in_rect { continue; }
-                if let Some(fptr) = child.borrow().data.data.actions.onmouseup {
-                    should_update_screen.push((fptr)(renderer));
-                }
-            },
-            MOUSE_DOWN_EVENT => {
-                if !current_point_in_rect { continue; }
-                if let Some(fptr) = child.borrow().data.data.actions.onmousedown {
-                    should_update_screen.push((fptr)(renderer));
-                }
-            },
-            MOUSE_MOVE_EVENT => {
-                // choose between mouseenter and mouseleave
-                if current_point_in_rect != previous_point_in_rect {
-                    if current_point_in_rect {
-                        // call mouseenter event
-                        if let Some(fptr) = child.borrow().data.data.actions.onmouseenter {
-                            should_update_screen.push((fptr)(renderer));
-                        }
-                    } else {
-                        // call mouseleave event
-                        if let Some(fptr) = child.borrow().data.data.actions.onmouseleave {
-                            should_update_screen.push((fptr)(renderer));
-                        }
-                    }
-                }
-            },
-            _ => { },
-        }
-
-        if child.borrow().data.data.actions.propagate_underlying {
-            check_available_actions(&child, renderer, x, y, old_x, old_y, event);
-        }
-    }
-
-    should_update_screen.iter().any(|e| *e)
-}
-*/
 
 #[inline]
 pub fn check_point_in_rect(
@@ -664,7 +428,8 @@ pub fn check_point_in_rect(
     rect: &UiRect<UiRendererData>,
 ) -> bool
 {
-    let min = (rect.x[0], rect.y[0]);
-    let max = (rect.x[3], rect.y[3]);
-    (x > min.0) && (x < max.0) && (y > min.1) && (y < max.1)
+    // top left, top right, bottom left, bottom right
+    let (left, top) = (rect.x[0], rect.y[0]); // top left
+    let (right, bottom) = (rect.x[3], rect.y[3]); // bottom right
+    (x > left) && (x < right) && (y > bottom) && (y < top)
 }

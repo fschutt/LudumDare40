@@ -3,11 +3,13 @@ use color::Color;
 use game::GameState;
 use glium::Texture2d;
 use font::FontInstanceId;
+use input::WindowState;
 use std::rc::Rc;
 use std::cell::RefCell;
 use texture::TextureInstanceId;
 
-pub struct UiRect<T> {
+#[derive(Clone)]
+pub struct UiRect<T: Clone> {
     pub x: [f32;4],
     pub y: [f32;4],
     pub data: Box<T>,
@@ -15,14 +17,23 @@ pub struct UiRect<T> {
 
 /// The actual user interface is just a bunch of rectangles
 /// The renctangles get mapped into screen space later on
+#[derive(Default, Clone)]
 pub struct Ui {
     pub rectangles: Vec<UiRect<UiRendererData>>,
 }
 
+impl Ui {
+    // Returns a mutable renference if the tag (the ID)
+    pub fn get_mut_rect_by_tag(&mut self, tag: &str) -> &mut UiRect<UiRendererData> {
+        self.rectangles.iter_mut().filter(|rect| rect.data.tag == Some(tag)).next().unwrap()
+    }
+}
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct UiRendererData
 {
+    /// "Tag", like an HTML ID. Used to identify the Rectangle
+    pub tag: Option<&'static str>,
     /// If the rectangle should have a background color
     pub color: Option<Color>,
     /// Image type (png, tiff, raw)
@@ -33,32 +44,18 @@ pub struct UiRendererData
     pub actions: UiActions,
 }
 
-impl UiRendererData
-{
-    /// Creates an invisible rectangle
-    pub fn empty() -> Self
-    {
-        Self {
-            color: None,
-            image: None,
-            text: None,
-            actions: UiActions::empty(),
-        }
-    }
-}
-
 /// A list of function pointers that get called by the `ui_handle_event()`
 /// function
 /// Each function should return if the renderer needs to be updated / redrawn
-#[derive(Clone)]
+#[derive(Default, Clone)]
 pub struct UiActions
 {
     /// What to do on a mouseup event
-    pub onmouseup: Option<fn(&mut GameState) -> bool>,
+    pub onmouseup: Option<fn(&mut WindowState, &Ui, &mut GameState) -> bool>,
     /// onmouseenter event: Mouse has entered the current rectangle
-    pub onmouseenter: Option<fn(&mut GameState) -> bool>,
+    pub onmouseenter: Option<fn(&mut WindowState, &Ui, &mut GameState) -> bool>,
     /// onmouseleave event: Mouse has left the current rectangle
-    pub onmouseleave: Option<fn(&mut GameState) -> bool>,
+    pub onmouseleave: Option<fn(&mut WindowState, &Ui, &mut GameState) -> bool>,
 }
 
 impl UiActions

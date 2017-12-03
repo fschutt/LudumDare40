@@ -52,6 +52,7 @@ pub mod camera;
 pub mod frame;
 pub mod ui;
 pub mod player_state;
+pub mod actions;
 
 use game::Game;
 

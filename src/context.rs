@@ -13,10 +13,16 @@ use font::FontInstanceId;
 use texture::{TextureId, TextureSystem};
 
 /// No indices, Triangle Strip
-pub const NO_INDICES_BUFFER: NoIndices = NoIndices(PrimitiveType::TriangleStrip);
+pub const NO_INDICES_BUFFER_TRIANGLE: NoIndices = NoIndices(PrimitiveType::TriangleStrip);
+
+pub const NO_INDICES_BUFFER_LINE: NoIndices = NoIndices(PrimitiveType::LinesList);
+
 pub const PIXEL_TO_SCREEN_SHADER_ID: &str = "pixel_to_screen_shader";
 pub const PIXEL_TO_SCREEN_VERT_SHADER_SOURCE: &str = include_str!("../shaders/pixel_to_screen_space.vert.glsl");
 pub const PIXEL_TO_SCREEN_FRAG_SHADER_SOURCE: &str = include_str!("../shaders/pixel_to_screen_space.frag.glsl");
+
+pub const PIXEL_TO_SCREEN_SHADER_LINE_ONLY_ID: &str = "pixel_to_screen_shader_line_only";
+pub const PIXEL_TO_SCREEN_FRAG_SHADER_LINE_ONLY_SOURCE: &str = include_str!("../shaders/pixel_to_screen_space.frag.glsl");
 
 pub struct OpenGlContext
 {
@@ -52,12 +58,15 @@ impl OpenGlContext {
             .with_srgb(None)
             .with_multisampling(4)
             .with_title(format!("{} version {}", ::assets::GAME_TITLE, env!("CARGO_PKG_VERSION")))
-            .build_glium()
+            .build_glium_debug(::glium::debug::DebugCallbackBehavior::PrintAll)
             .map_err(|_e| AppError { })?;
 
         let mut shader_programs = ShaderHashMap::default();
         shader_programs.insert(PIXEL_TO_SCREEN_SHADER_ID, Program::from_source(
             &display, PIXEL_TO_SCREEN_VERT_SHADER_SOURCE, PIXEL_TO_SCREEN_FRAG_SHADER_SOURCE, None
+        ).unwrap());
+        shader_programs.insert(PIXEL_TO_SCREEN_SHADER_LINE_ONLY_ID, Program::from_source(
+            &display, PIXEL_TO_SCREEN_VERT_SHADER_SOURCE, PIXEL_TO_SCREEN_FRAG_SHADER_LINE_ONLY_SOURCE, None
         ).unwrap());
 
         let texture_system = TextureSystem::new();

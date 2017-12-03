@@ -1,6 +1,6 @@
 //! Constants for easier access to the assets
 
-use texture::{SourcePixelRegion, TextureId, SourceTextureRegion};
+use texture::{SourcePixelRegion, TextureId, SourceTextureRegion, TextureInstanceId};
 
 pub const FONT_BIG_SIZE: u32 = 48;
 pub const FONT_SMALL_SIZE: u32 = 14;
@@ -10,8 +10,8 @@ pub const FONT: &[u8] = include_bytes!("../assets/fonts/FredokaOne-Regular.ttf")
 
 pub const GAME_TITLE: &str = "StackBoxes!";
 
-pub const START_SCREEN_BUTTON_00_ID: &str = "../assets/images/ui/PNG/yellow_button00.png";
-pub const START_SCREEN_BUTTON_00: &[u8] = include_bytes!("../assets/images/ui/PNG/yellow_button00.png");
+pub const START_SCREEN_BUTTON_00_ID: &str = "../assets/images/ui/PNG/green_button04.png";
+pub const START_SCREEN_BUTTON_00: &[u8] = include_bytes!("../assets/images/ui/PNG/green_button04.png");
 pub const START_SCREEN_BUTTON_00_TX_STR: SourceTextureRegion = SourceTextureRegion {
     texture_id: TextureId { texture_id: START_SCREEN_BUTTON_00_ID },
     /*image dimensions: 190 w * 49 h*/

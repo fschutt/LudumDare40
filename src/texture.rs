@@ -84,7 +84,9 @@ impl TextureSystem {
     pub fn draw_texture(&self, frame: &mut Frame, display: &Rc<Context>,
         texture_id: &TextureInstanceId, transparency: f32, shaders: &ShaderHashMap)
     {
-        use glium::Surface;
+        use glium::{Surface, Blend, Depth};
+        use glium::draw_parameters::DepthTest;
+        use glium::draw_parameters::DepthClamp;
 
         let shader = shaders.get(::context::PIXEL_TO_SCREEN_SHADER_ID).unwrap();
         let texture = self.textures.get(&texture_id.source_texture_region.texture_id).unwrap();
@@ -92,7 +94,7 @@ impl TextureSystem {
         let source_tr = &texture_id.source_texture_region.region;
         let target_tr = &texture_id.target_texture_region;
 
-        let z = 1.0_f32;
+        let z = 0.1_f32;
         let top_left = PixelScreenVert {
             position:   [ target_tr.screen_bottom_x as f32,
                          (target_tr.screen_bottom_y + target_tr.screen_height) as f32,
@@ -142,9 +144,20 @@ impl TextureSystem {
             tex: texture,
         );
 
+        let draw_parameters = DrawParameters {
+            blend: Blend::alpha_blending(),
+            depth: Depth {
+                test: DepthTest::IfLess,
+                write: true,
+                range: (0.0, 1.0),
+                clamp: DepthClamp::NoClamp,
+            },
+            .. Default::default()
+        };
+
         let vertex_buf = [bottom_left, top_left, bottom_right, top_right];
         let vbuf = VertexBuffer::new(display, &vertex_buf).unwrap();
-        frame.draw(&vbuf, ::context::NO_INDICES_BUFFER, shader, &uniforms, &DrawParameters::default()).unwrap();
+        frame.draw(&vbuf, ::context::NO_INDICES_BUFFER_TRIANGLE, shader, &uniforms, &DrawParameters::default()).unwrap();
     }
 }
 
