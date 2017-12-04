@@ -68,6 +68,17 @@ impl GameState {
             }
         }
     }
+
+    pub fn get_song(&self) -> &'static str {
+        match *self {
+            GameState::StartMenu => {
+                ::assets::AUDIO_MSG_PLAY_TITLE_SCREEN_SONG
+            },
+            GameState::Game(_) => {
+                ::assets::AUDIO_MSG_PLAY_GAME_SONG
+            }
+        }
+    }
 }
 
 impl Game {
@@ -79,7 +90,6 @@ impl Game {
 
         // -- initialize audio
         let audio_context = AudioContext::new();
-        audio_context.send_msg(::audio::AUDIO_MSG_PLAY_TITLE_SCREEN_SONG).unwrap();
 
         // -- initialize shaders
         let mut renderer = Renderer::new(width, height).unwrap();
@@ -121,6 +131,7 @@ impl Game {
 
         let mut previous_frame_ui = Ui::default();
         let mut previous_mouse_cursor_type = MouseCursor::Default;
+        let mut current_audio_song = "";
 
         'outer: loop {
 
@@ -141,13 +152,22 @@ impl Game {
                 previous_mouse_cursor_type = current_mouse_cursor_type;
             }
 
+            // update the audio, change song if needed
+            let new_song = self.game_state.get_song();
+            if new_song != current_audio_song {
+                println!("(main thread) sending new song: {:?}", new_song);
+                self.audio_context.send_msg(new_song)
+                .map_err(|e| { println!("could not send new song: {:}", e); })
+                .unwrap_or(());
+                current_audio_song = new_song;
+            }
+
             // the GameState generates the UI
             let mut current_frame_ui = self.game_state.get_ui();
 
             let mut game_frame = GameFrame {
                 frame: self.renderer.context.display.draw(),
                 context: &self.renderer.context,
-                audio_context: &self.audio_context,
                 font_ids: &self.available_font_ids,
                 texture_ids: &self.available_texture_ids
             };

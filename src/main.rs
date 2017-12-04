@@ -29,9 +29,10 @@
 #[macro_use] extern crate glium;
 extern crate image;
 extern crate glium_text;
-// extern crate twox_hash;
+extern crate twox_hash;
 extern crate nphysics2d;
-extern crate rodio;
+extern crate cpal;
+extern crate lewton;
 
 pub mod input;
 pub mod renderer;

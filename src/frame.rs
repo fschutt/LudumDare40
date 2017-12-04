@@ -16,7 +16,6 @@ use ShaderHashMap;
 pub struct GameFrame<'a> {
     pub frame: Frame,
     pub context: &'a OpenGlContext,
-    pub audio_context: &'a AudioContext,
     pub font_ids: &'a FontInstanceIdMap,
     pub texture_ids: &'a TextureInstanceIdMap,
 }

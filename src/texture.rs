@@ -1,6 +1,6 @@
 use FastHashMap;
 use std::io::{BufRead, Seek};
-use glium::texture::Texture2d;
+use glium::texture::CompressedSrgbTexture2d;
 use glium::backend::{Context, Facade};
 use glium::texture::RawImage2d;
 use glium::{DrawParameters, VertexBuffer, Program, Frame};
@@ -16,7 +16,7 @@ pub struct TextureId {
 #[derive(Default)]
 pub struct TextureSystem {
     // Images used by the renderer
-    pub textures: FastHashMap<TextureId, Texture2d>,
+    pub textures: FastHashMap<TextureId, CompressedSrgbTexture2d>,
 }
 
 /// Width, height and offsets into the texture
@@ -73,7 +73,7 @@ impl TextureSystem {
         let image = image::load(source, image::PNG).unwrap().to_rgba();
         let image_dimensions = image.dimensions();
         let image = RawImage2d::from_raw_rgba_reversed(&image.into_raw(), image_dimensions);
-        let opengl_texture = Texture2d::new(display, image).unwrap();
+        let opengl_texture = CompressedSrgbTexture2d::new(display, image).unwrap();
 
         let id = TextureId { texture_id: id };
         self.textures.insert(id.clone(), opengl_texture);

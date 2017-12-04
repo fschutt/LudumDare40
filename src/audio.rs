@@ -4,35 +4,26 @@
 
 use std::thread;
 use std::sync::mpsc;
-use std::io::BufReader;
-use rodio::{Source, Decoder, Endpoint};
-
-pub const TITLE_SCREEN_SONG_DATA: &[u8] = include_bytes!("../assets/sounds/music/title_screen.ogg");
-
-pub const AUDIO_MSG_PLAY_TITLE_SCREEN_SONG: &'static str = "play_level_1";
+use cpal;
+use lewton::inside_ogg::OggStreamReader;
 
 pub struct AudioContext {
     sender: mpsc::Sender<&'static str>,
     thread_handle: thread::JoinHandle<()>,
-    currently_loaded_song: Option<&'static str>,
 }
 
 impl AudioContext {
 
     /// Starts a thread, returns the context
     pub fn new() -> Self {
-        // Create a simple streaming channel
-        #[allow(deprecated)]
-        let endpoint = ::rodio::get_default_endpoint().unwrap();
 
         let (tx, rx) = mpsc::channel();
 
-        let thread_handle = thread::spawn(move || Self::async_music_loop(rx, endpoint));
+        let thread_handle = thread::spawn(move || Self::async_music_loop(rx));
 
         Self {
             sender: tx,
             thread_handle: thread_handle,
-            currently_loaded_song: None,
         }
     }
 
@@ -40,29 +31,105 @@ impl AudioContext {
         self.sender.send(msg)
     }
 
-    /// Constantly
-    fn async_music_loop(rx: mpsc::Receiver<&'static str>, endpoint: Endpoint) {
-        use ::std::io::Cursor;
-        use ::std::io::BufReader;
-        use ::std::time::Duration;
+    fn async_music_loop(rx: mpsc::Receiver<&'static str>) {
 
-        loop {
-            if let Ok(signal) = rx.try_recv() {
-                match signal {
-                    AUDIO_MSG_PLAY_TITLE_SCREEN_SONG => {
-                        let title_screen_song = Decoder::new(BufReader::new(Cursor::new(TITLE_SCREEN_SONG_DATA))).unwrap()
-                                                .repeat_infinite()
-                                                .fade_in(Duration::from_secs(2));
-                        ::rodio::play_raw(&endpoint, title_screen_song.convert_samples());
-                    },
-                    _ => { println!("error sound message: {:?}", signal);}
-                }
-            } else {
-                break;
+        use cpal::{UnknownTypeBuffer, Sample};
+        use std::thread;
+        use std::sync::Arc;
+
+        // decode all the songs
+        let title_screen_song = Arc::new(Song::decode_from_bytes(::assets::TITLE_SCREEN_SONG_DATA));
+        let game_song_1 = Arc::new(Song::decode_from_bytes(::assets::GAME_SONG_1_DATA));
+        let ending_screen_song = Arc::new(Song::decode_from_bytes(::assets::ENDING_SONG_1_DATA));
+
+        let last_song_tx : Option<mpsc::Sender<()>> = None;
+
+        while let Ok(event) = rx.recv() {
+
+            let mut current_song = title_screen_song.clone();
+
+            println!("(audio thread) got event: {:?}", event);
+
+            match event {
+                ::assets::AUDIO_MSG_PLAY_TITLE_SCREEN_SONG => { current_song = title_screen_song.clone(); },
+                ::assets::AUDIO_MSG_PLAY_GAME_SONG => { current_song = game_song_1.clone(); },
+                ::assets::AUDIO_MSG_PLAY_ENDING_SONG => { current_song = ending_screen_song.clone(); },
+                _ => { println!("received garbage on audio thread: {:?}", event); }
             }
 
-            ::std::thread::sleep(::std::time::Duration::from_millis(30));
+            println!("current sample rate: {:?}", current_song.sample_rate);
+
+            let (new_tx, new_rx) = mpsc::channel::<()>();
+
+            let csong = current_song.clone();
+
+            thread::spawn(move || {
+
+                let endpoint = cpal::default_endpoint().unwrap();
+                let event_loop = cpal::EventLoop::new();
+
+                let mut iter = (&*csong).decoded.iter().cycle();
+
+                let supported_formats_range = endpoint.supported_formats().unwrap().next().unwrap();
+                let mut format = supported_formats_range.with_max_samples_rate();
+                format.samples_rate = cpal::SamplesRate(current_song.sample_rate);
+                let voice_id = event_loop.build_voice(&endpoint, &format).unwrap();
+                event_loop.play(voice_id);
+
+                // event loop blocks
+                event_loop.run(|_voice_id, mut buffer| {
+                    // can only be i16
+                    if let UnknownTypeBuffer::I16(ref mut buffer) = buffer {
+                        // if new_rx.try_recv().is_err() { break; /* hack to enable song termination */ }
+
+                        'outer: for (idx, d) in buffer.iter_mut().enumerate() {
+                            match iter.next() {
+                                Some(val) => {
+                                    if idx == 65536 {
+                                        println!("breaking!");
+                                        break 'outer;
+                                    } else {
+                                        *d = val.to_i16();
+                                    }
+                                },
+                                None => break
+                            }
+                            // *d = iter.next().map(|s| s.to_i16()).unwrap_or(0_i16);
+                        }
+                    }
+
+                    println!(" exit! ");
+                })
+            });
+
+            // save the transmitting end in order to kill the song when we start a new song
+            let last_song_tx = Some(new_tx);
         }
     }
+}
 
+pub struct Song {
+    pub decoded: Vec<i16>,
+    pub sample_rate: u32,
+}
+
+impl Song {
+
+    /// DO NOT TOUCH THIS DECODING FUNCTION IT IS MAGIC
+    pub fn decode_from_bytes(data: &[u8]) -> Self {
+        let mut srr = OggStreamReader::new(::std::io::Cursor::new(data)).unwrap();
+        let sample_rate = srr.ident_hdr.audio_channels as f32 * srr.ident_hdr.audio_sample_rate as f32;
+
+        let mut decoded = Vec::<i16>::new();
+        while let Ok(Some(mut pck_samples)) = srr.read_dec_packet_itl() {
+            decoded.append(&mut pck_samples);
+        }
+
+        println!("sample rate: {:?}", sample_rate);
+
+        Self {
+            decoded: decoded,
+            sample_rate: sample_rate as u32,
+        }
+    }
 }

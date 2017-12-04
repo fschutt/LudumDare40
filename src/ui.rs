@@ -1,7 +1,7 @@
 //! UI rendering with rectangles - either has a solid color or an image attached
 use color::Color;
 use game::GameState;
-use glium::Texture2d;
+use glium::texture::CompressedSrgbTexture2d;
 use font::FontInstanceId;
 use input::WindowState;
 use std::rc::Rc;
