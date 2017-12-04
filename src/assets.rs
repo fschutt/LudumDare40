@@ -43,15 +43,15 @@ pub const START_SCREEN_BUTTON_00_TX_STR: SourceTextureRegion = SourceTextureRegi
 
 // hero texture
 
-pub const HERO_TEXTURE_ID: &str = "../assets/images/ui/PNG/yellow_button04.png";
+pub const HERO_TEXTURE_ID: &str = "../assets/images/hero.png";
 pub const HERO_TEXTURE: &[u8] = include_bytes!("../assets/images/hero.png");
 /* todo: add source pixel regions*/
-pub const HERO_TX_STR: SourceTextureRegion = SourceTextureRegion {
-    texture_id: TextureId { texture_id: START_SCREEN_BUTTON_00_ID },
+pub const HERO_TX_NORMAL_STR: SourceTextureRegion = SourceTextureRegion {
+    texture_id: TextureId { texture_id: HERO_TEXTURE_ID },
     /*image dimensions: 190 w * 49 h*/
     region: SourcePixelRegion {
         bottom_x: 0,
-        bottom_y: 16,
+        bottom_y: 64,
         width: 16,
         height: 16,
     }

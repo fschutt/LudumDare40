@@ -57,6 +57,17 @@ pub struct PixelScreenVert {
     pub tex_coords: [f32;2],
 }
 
+pub enum TextureDrawOptions {
+    PixelPerfect,
+    InterpolateTexture,
+}
+
+impl Default for TextureDrawOptions {
+    fn default() -> Self {
+        TextureDrawOptions::InterpolateTexture
+    }
+}
+
 implement_vertex!(PixelScreenVert, position, tex_coords);
 
 impl TextureSystem {
@@ -82,7 +93,8 @@ impl TextureSystem {
 
     // TODO: group textures by texture_id.source_texture_region.texture_id
     pub fn draw_texture(&self, frame: &mut Frame, display: &Rc<Context>,
-        texture_id: &TextureInstanceId, transparency: f32, shaders: &ShaderHashMap)
+                        texture_id: &TextureInstanceId, transparency: f32,
+                        shaders: &ShaderHashMap, draw_options: TextureDrawOptions)
     {
         use glium::{Surface, Blend, Depth};
         use glium::draw_parameters::DepthTest;
@@ -97,7 +109,7 @@ impl TextureSystem {
         let z = 0.1_f32;
         let top_left = PixelScreenVert {
             position:   [ target_tr.screen_bottom_x as f32,
-                         (target_tr.screen_bottom_y + target_tr.screen_height) as f32,
+                         target_tr.screen_bottom_y as f32 + target_tr.screen_height as f32,
                          z],
             tex_coords: [
                         (( source_tr.bottom_x as f32 / t_w as f32)),
@@ -106,8 +118,8 @@ impl TextureSystem {
         };
 
         let top_right = PixelScreenVert {
-            position:   [(target_tr.screen_bottom_x + target_tr.screen_width) as f32,
-                         (target_tr.screen_bottom_y + target_tr.screen_height) as f32,
+            position:   [target_tr.screen_bottom_x as f32 + target_tr.screen_width as f32,
+                         target_tr.screen_bottom_y as f32 + target_tr.screen_height as f32,
                          z],
             tex_coords: [
                         (((source_tr.bottom_x + source_tr.width) as f32 / t_w as f32)),
@@ -116,9 +128,9 @@ impl TextureSystem {
         };
 
         let bottom_left = PixelScreenVert {
-            position:   [ target_tr.screen_bottom_x as f32,
-                          target_tr.screen_bottom_y as f32,
-                          z],
+            position:   [target_tr.screen_bottom_x as f32,
+                         target_tr.screen_bottom_y as f32,
+                         z],
             tex_coords: [
                         (( source_tr.bottom_x as f32 / t_w as f32)),
                         (( source_tr.bottom_y as f32 / t_h as f32))
@@ -126,9 +138,9 @@ impl TextureSystem {
         };
 
         let bottom_right = PixelScreenVert {
-            position:   [(target_tr.screen_bottom_x + target_tr.screen_width) as f32,
-                          target_tr.screen_bottom_y as f32,
-                          z],
+            position:   [target_tr.screen_bottom_x as f32 + target_tr.screen_width as f32,
+                         target_tr.screen_bottom_y as f32,
+                         z],
             tex_coords: [
                         (((source_tr.bottom_x + source_tr.width) as f32 / t_w as f32)),
                         (( source_tr.bottom_y as f32 / t_h as f32))
@@ -137,11 +149,16 @@ impl TextureSystem {
 
         let (w, h) = frame.get_dimensions();
 
+        let cur_tex = match draw_options {
+            TextureDrawOptions::InterpolateTexture => texture.sampled().magnify_filter(::glium::uniforms::MagnifySamplerFilter::Linear),
+            TextureDrawOptions::PixelPerfect => texture.sampled().magnify_filter(::glium::uniforms::MagnifySamplerFilter::Nearest),
+        };
+
         let uniforms = uniform!(
             window_width: w as f32,
             window_height: h as f32,
             transparency: transparency,
-            tex: texture,
+            tex: cur_tex,
         );
 
         let draw_parameters = DrawParameters {

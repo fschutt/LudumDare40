@@ -7,20 +7,11 @@ use std::time::{Duration, Instant};
 use ui::{Ui, UiRect, UiRendererData};
 use game::GameState;
 
-// Shortcuts, hard-coded
-pub const SHORTCUT_MOVE_LEFT: KbShortcut = KbShortcut { modifier: None, key: 'd' };
-pub const SHORTCUT_MOVE_RIGHT: KbShortcut = KbShortcut { modifier: None, key: 'a' };
-
-// TODO: events (for the UI)
-pub const MOUSE_MOVE_EVENT: &str = "mousemove";
-pub const MOUSE_DOWN_EVENT: &str = "mousedown";
-pub const MOUSE_UP_EVENT: &str = "mouseup";
-
-#[derive(Debug, Copy, Clone)]
-pub struct KbShortcut
-{
-    modifier: Option<ReducedKbModifier>,
-    key: char,
+pub enum GameInputEvent {
+    PlayerJump,
+    PlayerGoLeft,
+    PlayerGoRight,
+    PlayerTakeBox,
 }
 
 /// Determines which keys are pressed currently (modifiers, etc.)
@@ -45,49 +36,6 @@ impl KeyboardState
             keys: Vec::new(),
         }
     }
-}
-
-/// Keyboard modifier key, reduced set suited for desktop UIs.
-/// Handles things such as `AltGr` -> split into "Alt" and "Shift"
-/// `RShift` and `LShift` are generalized to "Shift", same as Ctrl
-/// Fn keys have a number attached to them
-/// Other keys are ignored and forgotten
-/// There may be problems if both Alt keys are pressed and then released
-/// Therefore, keys that have a "right" and a "left" method have a number
-/// attached to them, how many keys are currently pressed. Currently, this is
-/// not in effect (too much work).
-#[derive(Debug, Copy, Clone, PartialEq)]
-pub enum ReducedKbModifier
-{
-    Fn(u8),   // Fn1, Fn2, etc.
-    Function, // Function key modifier
-    Alt,
-    Shift,
-    AltGr, // has to be seperate, same function as alt + shift
-    Super, // "Super" or Windows key
-    Ctrl,
-    RightClickMenu,
-    Tab,
-    Esc,
-    Del,    // "Entf" key
-    Return, // Control character because of shift + return options
-    Backspace,
-    PgUp,
-    PgDown,
-    VolumeUp,
-    VolumeDown,
-    VolumeMute,
-    MicMute,
-    TpVantange,
-    Home,
-    Pause,
-    End,
-    Roll,
-    Insert,
-    ArrowUp,
-    ArrowDown,
-    ArrowLeft,
-    ArrowRight,
 }
 
 /// Mouse position on the screen
@@ -174,7 +122,7 @@ impl WindowState
         event: &Event,
         ui: &Ui,
         game_state: &mut GameState,
-    ) -> bool
+    ) -> (bool, Vec<GameInputEvent>)
     {
         // update the state of the input information
         use glium::glutin::Event::*;
@@ -185,7 +133,7 @@ impl WindowState
         let _ui_handles_event = self.ui_handle_event(ui, game_state, event);
 
         match *event {
-            Closed => return false,
+            Closed => return (false, Vec::new()),
             MouseMoved(x, y) => { self.handle_mouse_move(game_state, x, y); },
             KeyboardInput(state, _, vk_code) => { self.handle_vk_code(game_state, state, vk_code); },
             MouseInput(state, button) => { self.handle_mouse_click(game_state, state, button); },
@@ -194,7 +142,7 @@ impl WindowState
             _ => { },
         }
 
-        true
+        (true, self.update_game_state_from_kbinput(game_state))
     }
 
     /// Handle the focus of a window
@@ -418,6 +366,34 @@ impl WindowState
         }
 
         false
+    }
+
+    /// Update the WASD keys
+    pub fn update_game_state_from_kbinput(&mut self, game_state: &mut GameState)
+        -> Vec<GameInputEvent>
+    {
+        let mut relevant_inputs = Vec::<GameInputEvent>::new();
+
+        if let GameState::Game(ref mut player_state) = *game_state {
+            for key in &self.keyboard_state.modifiers {
+                println!("key: {:?}", key);
+                match *key {
+                    VirtualKeyCode::W => { relevant_inputs.push(GameInputEvent::PlayerJump); },
+                    VirtualKeyCode::Space => { relevant_inputs.push(GameInputEvent::PlayerJump); },
+                    VirtualKeyCode::A => { relevant_inputs.push(GameInputEvent::PlayerGoLeft); },
+                    VirtualKeyCode::D => { relevant_inputs.push(GameInputEvent::PlayerGoRight); },
+                    VirtualKeyCode::Right => { relevant_inputs.push(GameInputEvent::PlayerGoRight); },
+                    VirtualKeyCode::Left => { relevant_inputs.push(GameInputEvent::PlayerGoLeft); },
+                    VirtualKeyCode::Up => { relevant_inputs.push(GameInputEvent::PlayerJump); },
+                    _ => { }
+                }
+            }
+        }
+
+        self.keyboard_state.modifiers.clear();
+        self.keyboard_state.hidden_keys.clear();
+
+        relevant_inputs
     }
 }
 

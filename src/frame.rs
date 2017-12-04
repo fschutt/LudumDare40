@@ -3,7 +3,7 @@ use audio::AudioContext;
 use {TextureInstanceIdMap, FontInstanceIdMap};
 use color::Color;
 use font::FontInstanceId;
-use texture::{TextureId, TextureInstanceId};
+use texture::{TextureId, TextureInstanceId, TextureDrawOptions};
 use context::OpenGlContext;
 use font::Text;
 use std::rc::Rc;
@@ -52,9 +52,10 @@ impl<'a> GameFrame<'a> {
         self.context.font_system.draw_font(&mut self.frame, text, color);
     }
 
-    pub fn draw_texture(&mut self, display: &Rc<Context>, texture_id: &TextureInstanceId, transparency: f32, shaders: &ShaderHashMap)
+    pub fn draw_texture(&mut self, display: &Rc<Context>, texture_id: &TextureInstanceId,
+                        transparency: f32, shaders: &ShaderHashMap, options: TextureDrawOptions)
     {
-        self.context.texture_system.draw_texture(&mut self.frame, display, texture_id, transparency, shaders);
+        self.context.texture_system.draw_texture(&mut self.frame, display, texture_id, transparency, shaders, options);
     }
 
     pub fn drop(self) {

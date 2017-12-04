@@ -20,6 +20,7 @@ pub const FONT_MEDIUM_ID: &str = "font_fredoka_medium";
 pub const FONT_SMALL_ID: &str = "font_fredoka_small";
 
 pub const TEXTURE_START_GAME_ID: &str = "texture_start_game";
+pub const TEXTURE_HERO_CHARACTER_ID: &str = "texture_hero_character";
 
 pub struct Game {
     pub renderer: Renderer,
@@ -113,6 +114,9 @@ impl Game {
         let texture_start_game = renderer.context.add_texture_png(::assets::START_SCREEN_BUTTON_00_ID, Cursor::new(::assets::START_SCREEN_BUTTON_00));
         available_texture_ids.insert(TEXTURE_START_GAME_ID, texture_start_game);
 
+        let texture_hero_char = renderer.context.add_texture_png(::assets::HERO_TEXTURE_ID, Cursor::new(::assets::HERO_TEXTURE));
+        available_texture_ids.insert(TEXTURE_HERO_CHARACTER_ID, texture_hero_char);
+
         Self {
             renderer: renderer,
             audio_context: audio_context,
@@ -128,21 +132,21 @@ impl Game {
         use glium::Surface;
         use glium::backend::Facade;
         use glium::glutin::MouseCursor;
+        use input::GameInputEvent;
 
         let mut previous_frame_ui = Ui::default();
         let mut previous_mouse_cursor_type = MouseCursor::Default;
-        let mut current_audio_song = "";
 
         'outer: loop {
 
             let begin_time = ::std::time::Instant::now();
+            let mut input_events = Vec::<GameInputEvent>::new();
 
             // updates the game state, by using the UI of the previous frame as a reference
             for ev in self.renderer.context.display.poll_events() {
-                let is_window_open = self.renderer.window_state.handle_event(&ev, &previous_frame_ui, &mut self.game_state);
-                if !is_window_open {
-                    break 'outer;
-                }
+                let (is_window_open, mut events) = self.renderer.window_state.handle_event(&ev, &previous_frame_ui, &mut self.game_state);
+                if !is_window_open { break 'outer; }
+                input_events.append(&mut events);
             }
 
             // update the mouse cursor
@@ -152,15 +156,10 @@ impl Game {
                 previous_mouse_cursor_type = current_mouse_cursor_type;
             }
 
-            // update the audio, change song if needed
-            let new_song = self.game_state.get_song();
-            if new_song != current_audio_song {
-                println!("(main thread) sending new song: {:?}", new_song);
-                self.audio_context.send_msg(new_song)
-                .map_err(|e| { println!("could not send new song: {:}", e); })
-                .unwrap_or(());
-                current_audio_song = new_song;
-            }
+            // update the audio, change song if needed. the audio module only changes the song if it has changed
+            self.audio_context.send_msg(self.game_state.get_song())
+            .map_err(|e| { println!("could not send new song: {:}", e); })
+            .unwrap_or(());
 
             // the GameState generates the UI
             let mut current_frame_ui = self.game_state.get_ui();
@@ -178,14 +177,17 @@ impl Game {
                                     &self.renderer.context.shader_programs, &mut current_frame_ui);
                 },
                 GameState::Game(ref mut player_state) => {
+                    player_state.camera.screen_width = self.renderer.window_state.width as f32;
+                    player_state.camera.screen_height = self.renderer.window_state.height as f32;
+
+                    let world_finalized = player_state.finalize(input_events);
                     show_game(&mut game_frame, self.renderer.context.display.get_context(),
                               &self.renderer.context.shader_programs,
-                              player_state.physics_world.finalize(), &player_state.camera, &player_state);
+                              &world_finalized, &player_state.camera);
                 }
             }
 
             game_frame.drop();
-
             previous_frame_ui = current_frame_ui;
             ::std::thread::sleep(::std::time::Duration::from_millis(16));
         }
@@ -198,6 +200,7 @@ fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>, shaders: &Shade
     use glium::Surface;
     use texture::TargetPixelRegion;
     use ui::{Ui, UiRect, UiRendererData, UiActions};
+    use texture::TextureDrawOptions;
 
     frame.clear_screen(Color::light_blue());
 
@@ -245,7 +248,7 @@ fn show_start_menu(frame: &mut GameFrame, display: &Rc<Context>, shaders: &Shade
 
     for rect in ui.rectangles.iter_mut() {
         if let Some(ref texture_instance_id) = rect.data.image {
-            frame.draw_texture(display, &texture_instance_id, 1.0, shaders);
+            frame.draw_texture(display, &texture_instance_id, 1.0, shaders, TextureDrawOptions::default());
         }
     }
 
@@ -285,18 +288,52 @@ fn draw_text_with_shadow(frame: &mut GameFrame, text: &str, font: &FontInstanceI
 
 // Draw the actual game
 fn show_game(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap,
-             data: PhysicsFinalizedData, camera: &Camera, player_state: &PlayerState)
+             game_finalized_data: &PhysicsFinalizedData, camera: &Camera)
 {
     use glium::Surface;
 
     frame.clear_screen(Color::light_blue());
+    draw_highscore(frame, display, shaders, game_finalized_data);
+    draw_boxes(frame, display, shaders, game_finalized_data);
+    draw_character(frame, display, shaders, game_finalized_data);
 
-    // draw highscore
-    let score = format!("{:.2}", player_state.highscore);
+}
+
+fn draw_boxes(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap,
+              game_finalized_data: &PhysicsFinalizedData)
+{
+
+}
+
+fn draw_character(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap,
+                  game_finalized_data: &PhysicsFinalizedData)
+{
+    use texture::{TargetPixelRegion, TextureDrawOptions};
+
+    let player_sprite_region = TargetPixelRegion {
+        screen_bottom_x: game_finalized_data.player_position.x as u32,
+        screen_bottom_y: game_finalized_data.player_position.y as u32,
+        screen_width: game_finalized_data.player_position.width as u32,
+        screen_height: game_finalized_data.player_position.height as u32,
+    };
+
+    let texture_instance_id = TextureInstanceId {
+        // TODO: set character state (side, flying, etc.) here
+        source_texture_region: ::assets::HERO_TX_NORMAL_STR,
+        target_texture_region: player_sprite_region,
+    };
+
+    frame.draw_texture(display, &texture_instance_id, 1.0, shaders, TextureDrawOptions::PixelPerfect);
+}
+
+fn draw_highscore(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap,
+                  game_finalized_data: &PhysicsFinalizedData)
+{
+    let score = format!("{:.2}", game_finalized_data.highscore);
     let initial_floor_height = 25.0;
     let big_font = frame.get_font(FONT_BIG_ID);
 
-    let height_in_screen_pixels = ((player_state.highscore) + initial_floor_height) as u32;
+    let height_in_screen_pixels = ((game_finalized_data.highscore) + initial_floor_height) as u32;
     let font_offset = 25;
 
     frame.draw_font(&Text { font: &big_font, text: &score, screen_x: 25 + 2, screen_y: height_in_screen_pixels  + font_offset - 4 }, Color::black());
@@ -305,7 +342,8 @@ fn show_game(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashM
     draw_highscore_line(frame, display, height_in_screen_pixels, shaders);
 }
 
-fn draw_ground(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap) {
+fn draw_ground(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap)
+{
 
 }
 

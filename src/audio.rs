@@ -42,13 +42,15 @@ impl AudioContext {
         let game_song_1 = Arc::new(Song::decode_from_bytes(::assets::GAME_SONG_1_DATA));
         let ending_screen_song = Arc::new(Song::decode_from_bytes(::assets::ENDING_SONG_1_DATA));
 
-        let last_song_tx : Option<mpsc::Sender<()>> = None;
+        println!("decoding done!");
+
+        let mut last_song_tx: Option<mpsc::Sender<()>> = None;
+        let mut last_song_id = "";
 
         while let Ok(event) = rx.recv() {
 
+            if event == last_song_id { continue; }
             let mut current_song = title_screen_song.clone();
-
-            println!("(audio thread) got event: {:?}", event);
 
             match event {
                 ::assets::AUDIO_MSG_PLAY_TITLE_SCREEN_SONG => { current_song = title_screen_song.clone(); },
@@ -57,11 +59,8 @@ impl AudioContext {
                 _ => { println!("received garbage on audio thread: {:?}", event); }
             }
 
-            println!("current sample rate: {:?}", current_song.sample_rate);
-
-            let (new_tx, new_rx) = mpsc::channel::<()>();
-
             let csong = current_song.clone();
+            let (new_tx, new_rx) = mpsc::channel();
 
             thread::spawn(move || {
 
@@ -77,33 +76,27 @@ impl AudioContext {
                 event_loop.play(voice_id);
 
                 // event loop blocks
-                event_loop.run(|_voice_id, mut buffer| {
+                event_loop.run(move |_voice_id, mut buffer| {
+
                     // can only be i16
                     if let UnknownTypeBuffer::I16(ref mut buffer) = buffer {
-                        // if new_rx.try_recv().is_err() { break; /* hack to enable song termination */ }
-
                         'outer: for (idx, d) in buffer.iter_mut().enumerate() {
-                            match iter.next() {
-                                Some(val) => {
-                                    if idx == 65536 {
-                                        println!("breaking!");
-                                        break 'outer;
-                                    } else {
-                                        *d = val.to_i16();
-                                    }
-                                },
-                                None => break
-                            }
-                            // *d = iter.next().map(|s| s.to_i16()).unwrap_or(0_i16);
+                            *d = iter.next().map(|s| s.to_i16()).unwrap_or(0_i16);
                         }
                     }
 
-                    println!(" exit! ");
-                })
+                    if let Err(mpsc::TryRecvError::Disconnected) = new_rx.try_recv() {
+                        return None;
+                    }
+
+                    Some(())
+                });
+
             });
 
             // save the transmitting end in order to kill the song when we start a new song
-            let last_song_tx = Some(new_tx);
+            last_song_id = event;
+            last_song_tx = Some(new_tx);
         }
     }
 }
@@ -124,8 +117,6 @@ impl Song {
         while let Ok(Some(mut pck_samples)) = srr.read_dec_packet_itl() {
             decoded.append(&mut pck_samples);
         }
-
-        println!("sample rate: {:?}", sample_rate);
 
         Self {
             decoded: decoded,

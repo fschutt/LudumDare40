@@ -9,6 +9,7 @@
 #![allow(unused_macros)]
 #![allow(unused_doc_comment)]
 #![allow(unused_variables)]
+#![allow(unused_assignments)]
 
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
