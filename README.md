@@ -8,7 +8,7 @@ cargo run --release
 
 ## Usage
 
-The game is not fully functional. Use W, A, S, D to move.
+The game is not fully functional. Use W, A, S, D (or arrow keys) to move.
 Stack the boxes from the left to the right as high as you can.
 Press E to take ownership of boxes.
 
