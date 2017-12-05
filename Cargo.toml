@@ -5,9 +5,8 @@ authors = ["Felix Schütt <felix.schuett@maps4print.com>"]
 
 [dependencies]
 glium_text = { git = "https://github.com/fschutt/glium_text" }
-image = "0.16.0"
+image = "0.17.0"
 twox-hash = "1.1.0"
-nphysics2d = "0.7.2"
 cpal = { git ="https://github.com/fschutt/cpal" }
 lewton = { git = "https://github.com/RustAudio/lewton" }
 

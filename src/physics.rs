@@ -5,6 +5,7 @@
 
 use player_state::{PlayerSpritePosition, PlayerState};
 use input::GameInputEvent;
+use std::time::Instant;
 
 /// If the player presses a key, he should arrive at his goal (with linear interpolation)
 /// in `SPEED_FACTOR` seconds
@@ -13,13 +14,38 @@ pub const SPEED_FACTOR: f32 = 0.25;
 /// Maximum speed the player can go, in any direction (plus an additional SPEED_FACTOR)
 pub const MAX_SPEED: f32 = 0.5;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct PhysicsWorld {
     /// Player velocity, in X and Y
     pub player_velocity: PlayerVelocity,
     pub crates: Vec<CratePosition>,
     pub player_position: PlayerSpritePosition,
+    pub last_crate_spawned: Instant,
     pub gravity: f32,
+}
+
+impl Default for PhysicsWorld {
+    fn default() -> Self {
+        Self {
+            last_crate_spawned: Instant::now(),
+            crates: Vec::new(),
+            player_position: PlayerSpritePosition::default(),
+            player_velocity: PlayerVelocity::default(),
+            gravity: 9.8,
+        }
+    }
+}
+
+impl PhysicsWorld {
+    // spawns a new crate
+    pub fn spawn_crate(&mut self, x_pos: f32, y_pos: f32) {
+        self.crates.push(CratePosition {
+            x: x_pos,
+            y: y_pos,
+            width: 32.0,
+            height: 32.0,
+        });
+    }
 }
 
 #[derive(Debug, Copy, Clone)]

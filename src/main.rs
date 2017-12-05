@@ -31,7 +31,6 @@
 extern crate image;
 extern crate glium_text;
 extern crate twox_hash;
-extern crate nphysics2d;
 extern crate cpal;
 extern crate lewton;
 
