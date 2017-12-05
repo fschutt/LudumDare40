@@ -2,6 +2,9 @@
 
 ## Installation
 
+Note: The windows binaries are cross-compiled! 
+You need to clone https://github.com/PistonDevelopers/binaries in the parent directory first! &4-bit only!
+
 ```
 cargo run --release
 ```

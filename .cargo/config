@@ -1,2 +1,10 @@
 [build]
 link-args = "-Wl,--gc-sections -ffunction-sections -dead_strip"
+
+[target.x86_64-pc-windows-gnu]
+linker = "x86_64-w64-mingw32-gcc"
+ar = "x86_64-w64-mingw32-gcc-ar"
+
+[target.x86_64-pc-windows-gnu.freetype]
+rustc-link-search = ["/home/felix/Development/binaries/x86_64/"]
+rustc-link-lib = ["freetype"]
