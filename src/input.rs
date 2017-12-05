@@ -10,6 +10,7 @@ use game::GameState;
 pub enum GameInputEvent {
     PlayerJump,
     PlayerGoLeft,
+    PlayerGoDown,
     PlayerGoRight,
     PlayerTakeBox,
 }
@@ -376,22 +377,24 @@ impl WindowState
 
         if let GameState::Game(ref mut player_state) = *game_state {
             for key in &self.keyboard_state.modifiers {
-                println!("key: {:?}", key);
                 match *key {
-                    VirtualKeyCode::W => { relevant_inputs.push(GameInputEvent::PlayerJump); },
-                    VirtualKeyCode::Space => { relevant_inputs.push(GameInputEvent::PlayerJump); },
-                    VirtualKeyCode::A => { relevant_inputs.push(GameInputEvent::PlayerGoLeft); },
-                    VirtualKeyCode::D => { relevant_inputs.push(GameInputEvent::PlayerGoRight); },
-                    VirtualKeyCode::Right => { relevant_inputs.push(GameInputEvent::PlayerGoRight); },
-                    VirtualKeyCode::Left => { relevant_inputs.push(GameInputEvent::PlayerGoLeft); },
-                    VirtualKeyCode::Up => { relevant_inputs.push(GameInputEvent::PlayerJump); },
+                    VirtualKeyCode::W       => { relevant_inputs.push(GameInputEvent::PlayerJump);      },
+                    VirtualKeyCode::Space   => { relevant_inputs.push(GameInputEvent::PlayerJump);      },
+                    VirtualKeyCode::A       => { relevant_inputs.push(GameInputEvent::PlayerGoLeft);    },
+                    VirtualKeyCode::S       => { relevant_inputs.push(GameInputEvent::PlayerGoDown);    },
+                    VirtualKeyCode::D       => { relevant_inputs.push(GameInputEvent::PlayerGoRight);   },
+                    VirtualKeyCode::E       => { relevant_inputs.push(GameInputEvent::PlayerTakeBox);   },
+                    VirtualKeyCode::Right   => { relevant_inputs.push(GameInputEvent::PlayerGoRight);   },
+                    VirtualKeyCode::Left    => { relevant_inputs.push(GameInputEvent::PlayerGoLeft);    },
+                    VirtualKeyCode::Up      => { relevant_inputs.push(GameInputEvent::PlayerJump);      },
+                    VirtualKeyCode::Down    => { relevant_inputs.push(GameInputEvent::PlayerGoDown);    },
                     _ => { }
                 }
             }
         }
 
-        self.keyboard_state.modifiers.clear();
-        self.keyboard_state.hidden_keys.clear();
+        self.keyboard_state.modifiers = Vec::new();
+        self.keyboard_state.hidden_keys = Vec::new();
 
         relevant_inputs
     }

@@ -7,16 +7,26 @@ use glium::{DrawParameters, VertexBuffer, Program, Frame};
 use ui::UiRect;
 use std::rc::Rc;
 use ShaderHashMap;
+use std::cell::Cell;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub struct TextureId {
-    pub texture_id: &'static str
+    pub texture_id: &'static str,
 }
 
-#[derive(Default)]
 pub struct TextureSystem {
     // Images used by the renderer
     pub textures: FastHashMap<TextureId, CompressedSrgbTexture2d>,
+    pub highest_texture: Cell<f32>,
+}
+
+impl Default for TextureSystem {
+    fn default() -> Self {
+        Self {
+            textures: FastHashMap::<TextureId, CompressedSrgbTexture2d>::default(),
+            highest_texture: Cell::new(0.99),
+        }
+    }
 }
 
 /// Width, height and offsets into the texture
@@ -106,7 +116,7 @@ impl TextureSystem {
         let source_tr = &texture_id.source_texture_region.region;
         let target_tr = &texture_id.target_texture_region;
 
-        let z = 0.1_f32;
+        let z = self.highest_texture.get();
         let top_left = PixelScreenVert {
             position:   [ target_tr.screen_bottom_x as f32,
                          target_tr.screen_bottom_y as f32 + target_tr.screen_height as f32,
@@ -164,17 +174,18 @@ impl TextureSystem {
         let draw_parameters = DrawParameters {
             blend: Blend::alpha_blending(),
             depth: Depth {
-                test: DepthTest::IfLess,
+                test: ::glium::draw_parameters::DepthTest::IfLess,
                 write: true,
                 range: (0.0, 1.0),
-                clamp: DepthClamp::NoClamp,
+                clamp: ::glium::draw_parameters::DepthClamp::Clamp,
             },
             .. Default::default()
         };
 
         let vertex_buf = [bottom_left, top_left, bottom_right, top_right];
         let vbuf = VertexBuffer::new(display, &vertex_buf).unwrap();
-        frame.draw(&vbuf, ::context::NO_INDICES_BUFFER_TRIANGLE, shader, &uniforms, &DrawParameters::default()).unwrap();
+        frame.draw(&vbuf, ::context::NO_INDICES_BUFFER_TRIANGLE, shader, &uniforms, &draw_parameters).unwrap();
+        self.highest_texture.set(z - 0.001);
     }
 }
 

@@ -21,6 +21,8 @@ pub const FONT_SMALL_ID: &str = "font_fredoka_small";
 
 pub const TEXTURE_START_GAME_ID: &str = "texture_start_game";
 pub const TEXTURE_HERO_CHARACTER_ID: &str = "texture_hero_character";
+pub const TEXTURE_CRATE_ID: &str = "texture_crate";
+pub const TEXTURE_BACKGROUND_ID: &str = "texture_background";
 
 pub struct Game {
     pub renderer: Renderer,
@@ -110,12 +112,17 @@ impl Game {
         // -- initialize textures
         let mut available_texture_ids = TextureInstanceIdMap::default();
 
-        let font_instance_big_id = renderer.context.add_font(::assets::FONT_ID, ::assets::FONT_BIG_SIZE, Cursor::new(::assets::FONT));
         let texture_start_game = renderer.context.add_texture_png(::assets::START_SCREEN_BUTTON_00_ID, Cursor::new(::assets::START_SCREEN_BUTTON_00));
         available_texture_ids.insert(TEXTURE_START_GAME_ID, texture_start_game);
 
         let texture_hero_char = renderer.context.add_texture_png(::assets::HERO_TEXTURE_ID, Cursor::new(::assets::HERO_TEXTURE));
         available_texture_ids.insert(TEXTURE_HERO_CHARACTER_ID, texture_hero_char);
+
+        let texture_crate = renderer.context.add_texture_png(::assets::CRATE_TEXTURE_ID, Cursor::new(::assets::CRATE_TEXTURE_DATA));
+        available_texture_ids.insert(TEXTURE_CRATE_ID, texture_crate);
+
+        let texture_background = renderer.context.add_texture_png(::assets::BACKGROUND_3_TEXTURE_ID, Cursor::new(::assets::BACKGROUND_3_TEXTURE_DATA));
+        available_texture_ids.insert(TEXTURE_BACKGROUND_ID, texture_background);
 
         Self {
             renderer: renderer,
@@ -188,6 +195,7 @@ impl Game {
             }
 
             game_frame.drop();
+            self.renderer.context.texture_system.highest_texture.set(0.99);
             previous_frame_ui = current_frame_ui;
             ::std::thread::sleep(::std::time::Duration::from_millis(16));
         }
@@ -293,16 +301,63 @@ fn show_game(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashM
     use glium::Surface;
 
     frame.clear_screen(Color::light_blue());
+    draw_background(frame, display, shaders, game_finalized_data);
     draw_highscore(frame, display, shaders, game_finalized_data);
-    draw_boxes(frame, display, shaders, game_finalized_data);
+    draw_crates(frame, display, shaders, game_finalized_data);
     draw_character(frame, display, shaders, game_finalized_data);
 
 }
 
-fn draw_boxes(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap,
-              game_finalized_data: &PhysicsFinalizedData)
+fn draw_background(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap,
+                   game_finalized_data: &PhysicsFinalizedData)
 {
+    use texture::{TargetPixelRegion, TextureDrawOptions};
+    use glium::Surface;
 
+    let (w, h) = frame.frame.get_dimensions();
+
+    let max = w.max(h);
+    let min = w.min(h);
+    let aspect_ratio = w as f32 / h as f32;
+
+    let background_sprite_region = TargetPixelRegion {
+        screen_bottom_x: 0,
+        screen_bottom_y: 0,
+        screen_width: w,
+        screen_height: h,
+    };
+
+    let texture_instance_id = TextureInstanceId {
+        // TODO: set character state (side, flying, etc.) here
+        source_texture_region: ::assets::BACKGROUND_3_TEXTURE_TX_STR,
+        target_texture_region: background_sprite_region,
+    };
+
+    frame.draw_texture(display, &texture_instance_id, 1.0, shaders, TextureDrawOptions::PixelPerfect);
+}
+
+fn draw_crates(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap,
+               game_finalized_data: &PhysicsFinalizedData)
+{
+    use texture::{TargetPixelRegion, TextureDrawOptions};
+
+    for crate_box in &game_finalized_data.crates {
+
+        let crate_sprite_region = TargetPixelRegion {
+            screen_bottom_x: crate_box.x as u32,
+            screen_bottom_y: crate_box.y as u32,
+            screen_width: crate_box.width as u32,
+            screen_height: crate_box.height as u32,
+        };
+
+        let texture_instance_id = TextureInstanceId {
+            // TODO: set character state (side, flying, etc.) here
+            source_texture_region: ::assets::CRATE_TEXTURE_TX_STR,
+            target_texture_region: crate_sprite_region,
+        };
+
+        frame.draw_texture(display, &texture_instance_id, 1.0, shaders, TextureDrawOptions::PixelPerfect);
+    }
 }
 
 fn draw_character(frame: &mut GameFrame, display: &Rc<Context>, shaders: &ShaderHashMap,

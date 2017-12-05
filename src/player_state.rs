@@ -21,18 +21,29 @@ impl PlayerState {
 
         const TIME_NANOS_PER_FRAME: f32 = 1_000_000_000.0 / 60.0;
 
-        for event in events {
-            match event {
+        let now = Instant::now();
+        let tick = now - self.last_tick_update;
+        self.last_tick_update = now;
+        let tick_nanos = (tick.as_secs() * 1_000_000_000) + tick.subsec_nanos() as u64;
+        let time_diff = tick_nanos as f32 / TIME_NANOS_PER_FRAME;
+
+        if let Some(event) = events.get(0) {
+            match *event {
                 GameInputEvent::PlayerJump => {
-                    if self.physics_world.player_velocity.y < MAX_SPEED {
-                        self.physics_world.player_velocity.y += 10.0;
-                    }
+                    self.physics_world.player_velocity.y *= 1.1;
+                    self.physics_world.player_velocity.y += 0.5;
                 },
-                GameInputEvent::PlayerGoLeft => {
-                    self.physics_world.player_velocity.x -= 5.0;
+                GameInputEvent::PlayerGoDown => {
+                    self.physics_world.player_velocity.y *= 0.9;
+                    self.physics_world.player_velocity.y -= 0.5;
                 },
                 GameInputEvent::PlayerGoRight => {
-                    self.physics_world.player_velocity.x += 5.0;
+                    self.physics_world.player_velocity.x *= 1.1;
+                    self.physics_world.player_velocity.x -= 0.5;
+                },
+                GameInputEvent::PlayerGoLeft => {
+                    self.physics_world.player_velocity.x *= 0.9;
+                    self.physics_world.player_velocity.x -= 0.5;
                 },
                 GameInputEvent::PlayerTakeBox => {
                     if !self.player_has_box {
@@ -42,33 +53,16 @@ impl PlayerState {
             }
         }
 
-        let now = Instant::now();
-        let tick = now - self.last_tick_update;
-        self.last_tick_update = now;
-        let tick_nanos = (tick.as_secs() * 1_000_000_000) + tick.subsec_nanos() as u64;
-        let time_diff = tick_nanos as f32 / TIME_NANOS_PER_FRAME;
-
-
         // TODO: express as vector!
         let mut x_diff = ::physics::SPEED_FACTOR * self.physics_world.player_velocity.x * time_diff;
         let mut y_diff = ::physics::SPEED_FACTOR * self.physics_world.player_velocity.y * time_diff;
 
-        // self.physics_world.player_velocity.y -= 9_800_000_000.0 / time_diff.powi(2);  // 9.8 m/s2
+        self.physics_world.player_velocity.y -= 9_800_000_000.0 / time_diff.powi(2);  // 9.8 m/s2
 
         // keep character in bounds of the screen
-        if self.physics_world.player_position.y <= (self.camera.y + self.floor_height)  {
-            y_diff = 0.0;
+        if (self.physics_world.player_position.y + y_diff) < (self.camera.y + self.floor_height)  {
+            y_diff = self.camera.y + self.floor_height;
         }
-/*
-        if self.physics_world.player_position.x >= (self.camera.x + self.camera.screen_width) ||
-           self.physics_world.player_position.x <= self.camera.x {
-            x_diff = -x_diff;
-        }
-
-        if self.physics_world.player_position.y >= (self.camera.y + self.camera.screen_height) {
-            y_diff = -y_diff;
-        }
-*/
 
         self.physics_world.player_position.x += x_diff;
         self.physics_world.player_position.y += y_diff;

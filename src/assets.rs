@@ -28,11 +28,12 @@ pub const AUDIO_MSG_PLAY_ENDING_SONG: &'static str = "../assets/sounds/music/end
 
 
 // -- textures
+
+// start screen
 pub const START_SCREEN_BUTTON_00_ID: &str = "../assets/images/ui/PNG/yellow_button04.png";
 pub const START_SCREEN_BUTTON_00: &[u8] = include_bytes!("../assets/images/ui/PNG/yellow_button04.png");
 pub const START_SCREEN_BUTTON_00_TX_STR: SourceTextureRegion = SourceTextureRegion {
     texture_id: TextureId { texture_id: START_SCREEN_BUTTON_00_ID },
-    /*image dimensions: 190 w * 49 h*/
     region: SourcePixelRegion {
         bottom_x: 0,
         bottom_y: 0,
@@ -42,17 +43,41 @@ pub const START_SCREEN_BUTTON_00_TX_STR: SourceTextureRegion = SourceTextureRegi
 };
 
 // hero texture
-
 pub const HERO_TEXTURE_ID: &str = "../assets/images/hero.png";
 pub const HERO_TEXTURE: &[u8] = include_bytes!("../assets/images/hero.png");
 /* todo: add source pixel regions*/
 pub const HERO_TX_NORMAL_STR: SourceTextureRegion = SourceTextureRegion {
     texture_id: TextureId { texture_id: HERO_TEXTURE_ID },
-    /*image dimensions: 190 w * 49 h*/
     region: SourcePixelRegion {
         bottom_x: 0,
         bottom_y: 64,
         width: 16,
         height: 16,
+    }
+};
+
+// crate texture
+pub const CRATE_TEXTURE_ID: &str = "../assets/images/crate.png";
+pub const CRATE_TEXTURE_DATA: &[u8] = include_bytes!("../assets/images/crate.png");
+pub const CRATE_TEXTURE_TX_STR: SourceTextureRegion = SourceTextureRegion {
+    texture_id: TextureId { texture_id: CRATE_TEXTURE_ID },
+    region: SourcePixelRegion {
+        bottom_x: 0,
+        bottom_y: 0,
+        width: 32,
+        height: 32,
+    }
+};
+
+// background texture
+pub const BACKGROUND_3_TEXTURE_ID: &str = "../assets/images/background/3.png";
+pub const BACKGROUND_3_TEXTURE_DATA: &[u8] = include_bytes!("../assets/images/background/3.png");
+pub const BACKGROUND_3_TEXTURE_TX_STR: SourceTextureRegion = SourceTextureRegion {
+    texture_id: TextureId { texture_id: BACKGROUND_3_TEXTURE_ID },
+    region: SourcePixelRegion {
+        bottom_x: 0,
+        bottom_y: 0,
+        width: 256,
+        height: 182,
     }
 };
