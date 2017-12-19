@@ -36,13 +36,22 @@ impl AudioContext {
         use cpal::{UnknownTypeBuffer, Sample};
         use std::thread;
         use std::sync::Arc;
+        use std::time::{Instant, Duration};
 
+        let songs = [::assets::TITLE_SCREEN_SONG_DATA, ::assets::GAME_SONG_1_DATA, ::assets::ENDING_SONG_1_DATA];
+        
         // decode all the songs
-        let title_screen_song = Arc::new(Song::decode_from_bytes(::assets::TITLE_SCREEN_SONG_DATA));
-        let game_song_1 = Arc::new(Song::decode_from_bytes(::assets::GAME_SONG_1_DATA));
-        let ending_screen_song = Arc::new(Song::decode_from_bytes(::assets::ENDING_SONG_1_DATA));
+        let decoded_songs = songs.into_iter().enumerate().map(|(song_id, song_data)| {
+            let time_start = Instant::now();
+            let current_song = Song::decode_from_bytes(song_data);
+            let duration_decoding = (Instant::now() - time_start).subsec_nanos() as f32 / 1_000_000.0;
+            println!("decoded song {:?} in {:?} ms", song_id, duration_decoding);
+            Arc::new(current_song)
+        }).collect::<Vec<Arc<Song>>>();
 
-        println!("decoding done!");
+        let title_screen_song = &decoded_songs[0];
+        let game_song_1 = &decoded_songs[1];
+        let ending_screen_song = &decoded_songs[2];
 
         let mut last_song_tx: Option<mpsc::Sender<()>> = None;
         let mut last_song_id = "";
